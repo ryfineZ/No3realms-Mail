@@ -7,6 +7,21 @@ import {cvtR2Url} from "@/utils/convert.js";
 const routes = [
     {
         path: '/',
+        name: 'portal',
+        component: () => import('@/views/portal/index.vue'),
+    },
+    {
+        path: '/api-docs',
+        name: 'api-docs',
+        component: () => import('@/views/api-docs/index.vue'),
+    },
+    {
+        path: '/share/:shareId',
+        name: 'share',
+        component: () => import('@/views/share/index.vue'),
+    },
+    {
+        path: '/app',
         name: 'layout',
         redirect: '/inbox',
         component: () => import('@/layout/index.vue'),
@@ -38,6 +53,16 @@ const routes = [
                 meta: {
                     title: 'settings',
                     name: 'setting',
+                    menu: true
+                }
+            },
+            {
+                path: '/domains',
+                name: 'domain',
+                component: () => import('@/views/domain/index.vue'),
+                meta: {
+                    title: 'domains',
+                    name: 'domain',
                     menu: true
                 }
             },
@@ -98,17 +123,21 @@ router.beforeEach((to, from, next) => {
 
     const token = localStorage.getItem('token')
 
-    if (!token && to.name !== 'login') {
-        return next({name: 'login'})
+    // 无需登录的公开页面
+    if (to.name === 'portal' || to.name === 'login' || to.name === 'api-docs' || to.name === 'share') {
+        if (token && to.name !== 'api-docs') {
+            // 已登录 → 跳过公开页，去收件箱（API文档允许已登录用户查看）
+            return next({ name: 'email' })
+        }
+        if (to.name === 'login') {
+            loadBackground(next)
+            return
+        }
+        return next()
     }
 
-    if (!token && to.name === 'login') {
-        loadBackground(next)
-        return
-    }
-
-    if (token && to.name === 'login') {
-        return next(from.path)
+    if (!token) {
+        return next({ name: 'portal' })
     }
 
     next()

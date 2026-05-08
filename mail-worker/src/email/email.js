@@ -10,6 +10,7 @@ import emailUtils from '../utils/email-utils';
 import roleService from '../service/role-service';
 import userService from '../service/user-service';
 import telegramService from '../service/telegram-service';
+import KvConst from '../const/kv-const';
 
 export async function email(message, env, ctx) {
 
@@ -45,6 +46,30 @@ export async function email(message, env, ctx) {
 		const email = await PostalMime.parse(content);
 
 		const account = await accountService.selectByEmailIncludeDel({ env: env }, message.to);
+
+		// 临时邮箱处理：无正式账户时，检查是否为临时邮箱
+		if (!account) {
+			const tempMeta = await env.kv.get(KvConst.TEMP_EMAIL + message.to, 'json');
+			if (tempMeta && tempMeta.expiry > Date.now()) {
+				const ttlSec = Math.max(1, Math.round((tempMeta.expiry - Date.now()) / 1000));
+				const inbox = await env.kv.get(KvConst.TEMP_INBOX + tempMeta.token, 'json') || [];
+				inbox.unshift({
+					id: Date.now(),
+					from: email.from?.address || message.from,
+					name: email.from?.name || emailUtils.getName(email.from?.address || message.from),
+					subject: email.subject || '(无主题)',
+					text: (email.text || '').substring(0, 500),
+					html: (email.html || '').substring(0, 2000),
+					time: new Date().toISOString(),
+				});
+				await env.kv.put(
+					KvConst.TEMP_INBOX + tempMeta.token,
+					JSON.stringify(inbox.slice(0, 30)),
+					{ expirationTtl: ttlSec }
+				);
+				return; // 已处理，不拒绝也不继续常规流程
+			}
+		}
 
 		if (!account && noRecipient === settingConst.noRecipient.CLOSE) {
 			message.setReject('Recipient not found');

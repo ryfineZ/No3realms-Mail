@@ -5,12 +5,14 @@ import userContext from '../security/user-context';
 import attService from '../service/att-service';
 
 app.get('/email/list', async (c) => {
-	const data = await emailService.list(c, c.req.query(), userContext.getUserId(c));
+	const user = userContext.getUser(c);
+	const data = await emailService.list(c, c.req.query(), userContext.getUserId(c), user.email === c.env.admin);
 	return c.json(result.ok(data));
 });
 
 app.get('/email/latest', async (c) => {
-	const list = await emailService.latest(c, c.req.query(), userContext.getUserId(c));
+	const user = userContext.getUser(c);
+	const list = await emailService.latest(c, c.req.query(), userContext.getUserId(c), user.email === c.env.admin);
 	return c.json(result.ok(list));
 });
 

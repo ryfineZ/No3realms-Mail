@@ -6,6 +6,7 @@ import saltHashUtils from '../utils/crypto-utils';
 import cryptoUtils from '../utils/crypto-utils';
 import emailUtils from '../utils/email-utils';
 import roleService from './role-service';
+import domainService from './domain-service';
 import verifyUtils from '../utils/verify-utils';
 import { t } from '../i18n/i18n';
 import reqUtils from '../utils/req-utils';
@@ -104,7 +105,8 @@ const publicService = {
 				throw new BizError(t('notEmail'));
 			}
 
-			if (!c.env.domain.includes(emailUtils.getDomain(emailRow.email))) {
+			const domainRow = await domainService.findVerifiedDomain(c, emailUtils.getDomain(emailRow.email), null, true);
+				if (!domainRow) {
 				throw new BizError(t('notEmailDomain'));
 			}
 

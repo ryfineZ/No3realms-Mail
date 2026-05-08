@@ -10,6 +10,7 @@ import {accountConst, isDel, settingConst} from '../const/entity-const';
 import settingService from './setting-service';
 import turnstileService from './turnstile-service';
 import roleService from './role-service';
+import domainService from './domain-service';
 import { t } from '../i18n/i18n';
 import verifyRecordService from './verify-record-service';
 
@@ -35,7 +36,10 @@ const accountService = {
 			throw new BizError(t('notEmail'));
 		}
 
-		if (!c.env.domain.includes(emailUtils.getDomain(email))) {
+		const emailDomain = emailUtils.getDomain(email);
+		const userRow = await userService.selectById(c, userId);
+		const domainRow = await domainService.findVerifiedDomain(c, emailDomain, userId, userRow.email === c.env.admin);
+		if (!domainRow) {
 			throw new BizError(t('notExistDomain'));
 		}
 
@@ -57,7 +61,6 @@ const accountService = {
 			throw new BizError(t('isRegAccount'));
 		}
 
-		const userRow = await userService.selectById(c, userId);
 		const roleRow = await roleService.selectById(c, userRow.type);
 
 		if (userRow.email !== c.env.admin) {
@@ -103,13 +106,15 @@ const accountService = {
 		return orm(c).select().from(account).where(sql`${account.email} COLLATE NOCASE = ${email}`).get();
 	},
 
-	list(c, params, userId) {
+	list(c, params, userId, isAdmin = false) {
 
-		let { accountId, size, lastSort } = params;
+		let { accountId, size, lastSort, lastEmailTime, email } = params;
 
 		accountId = Number(accountId);
 		size = Number(size);
 		lastSort = Number(lastSort);
+		lastEmailTime = String(lastEmailTime || '9999-12-31 23:59:59');
+		email = String(email || '').trim();
 
 		if (size > 30) {
 			size = 30;
@@ -123,23 +128,31 @@ const accountService = {
 			lastSort = 9999999999;
 		}
 
-		return orm(c).select().from(account).where(
-			and(
-				eq(account.userId, userId),
-				eq(account.isDel, isDel.NORMAL),
-					or(
-						lt(account.sort, lastSort),
-						and(
-							eq(account.sort, lastSort),
-							gt(account.accountId, accountId)
-						)
-					))
+		const conditions = [
+			eq(account.isDel, isDel.NORMAL)
+		];
+
+		if (!isAdmin) {
+			conditions.push(eq(account.userId, userId));
+		}
+
+		if (email) {
+			conditions.push(sql`${account.email} COLLATE NOCASE LIKE ${'%' + email + '%'}`);
+		} else {
+			conditions.push(or(
+				lt(sql`COALESCE(${account.latestEmailTime}, ${account.createTime})`, lastEmailTime),
+				and(
+					eq(sql`COALESCE(${account.latestEmailTime}, ${account.createTime})`, lastEmailTime),
+					gt(account.accountId, accountId)
 				)
-			.orderBy(desc(account.sort), asc(account.accountId))
+			));
+		}
+
+		return orm(c).select().from(account).where(and(...conditions))
+			.orderBy(desc(sql`COALESCE(${account.latestEmailTime}, ${account.createTime})`), asc(account.accountId))
 			.limit(size)
 			.all();
 	},
-
 	async delete(c, params, userId) {
 
 		let { accountId } = params;
@@ -199,6 +212,13 @@ const accountService = {
 	async countUserAccount(c, userId) {
 		const { num } = await orm(c).select({num: count()}).from(account).where(and(eq(account.userId, userId),eq(account.isDel, isDel.NORMAL))).get();
 		return num;
+	},
+
+	async searchUserIdsByEmail(c, email) {
+		const rows = await orm(c).select({ userId: account.userId }).from(account)
+			.where(sql`${account.email} COLLATE NOCASE LIKE ${'%' + email + '%'}`)
+			.groupBy(account.userId).all();
+		return rows.map(r => r.userId);
 	},
 
 	async restoreByEmail(c, email) {

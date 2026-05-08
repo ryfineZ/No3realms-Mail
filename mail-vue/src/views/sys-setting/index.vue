@@ -189,6 +189,19 @@
                   </el-button>
                 </div>
               </div>
+              <div class="setting-item">
+                <div>
+                  <span>邮件保留时间</span>
+                  <el-tooltip effect="dark" content="设为 0 表示不自动清理">
+                    <Icon class="warning" icon="fe:warning" width="18" height="18"/>
+                  </el-tooltip>
+                </div>
+                <div>
+                  <el-input-number v-model="setting.emailRetention" :min="0" size="small"
+                                   @change="change" :before-change="beforeChange" />
+                  <span style="margin-left: 6px; font-size: 13px; color: var(--el-text-color-secondary); white-space: nowrap">小时</span>
+                </div>
+              </div>
             </div>
           </div>
 

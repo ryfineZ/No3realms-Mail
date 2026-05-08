@@ -12,6 +12,10 @@ const base64urlDecode = (str) => {
 	return Uint8Array.from(atob(str), c => c.charCodeAt(0));
 };
 
+function getJwtSecret(c) {
+	return c.env.JWT_SECRET || c.env.jwt_secret;
+}
+
 const jwtUtils = {
 	async generateToken(c, payload, expiresInSeconds) {
 		const header = {
@@ -34,7 +38,7 @@ const jwtUtils = {
 
 		const key = await crypto.subtle.importKey(
 			'raw',
-			encoder.encode(c.env.jwt_secret),
+			encoder.encode(getJwtSecret(c)),
 			{ name: 'HMAC', hash: 'SHA-256' },
 			false,
 			['sign']
@@ -55,7 +59,7 @@ const jwtUtils = {
 			const data = `${headerB64}.${payloadB64}`;
 			const key = await crypto.subtle.importKey(
 				'raw',
-				encoder.encode(c.env.jwt_secret),
+				encoder.encode(getJwtSecret(c)),
 				{ name: 'HMAC', hash: 'SHA-256' },
 				false,
 				['verify']

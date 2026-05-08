@@ -7,7 +7,7 @@ const dbInit = {
 
 		const secret = c.req.param('secret');
 
-		if (secret !== c.env.jwt_secret) {
+		if (secret !== (c.env.JWT_SECRET || c.env.jwt_secret)) {
 			return c.text('❌ JWT secret mismatch');
 		}
 
@@ -28,9 +28,105 @@ const dbInit = {
 		await this.v2_7DB(c);
 		await this.v2_8DB(c);
 		await this.v2_9DB(c);
+		await this.v3_0DB(c);
+		await this.v3_1DB(c);
+		await this.v3_2DB(c);
+		await this.v3_3DB(c);
+		await this.v3_4DB(c);
+		await this.v3_5DB(c);
 		await settingService.refresh(c);
 		return c.text('success');
 	},
+
+	async v3_0DB(c) {
+		// 创建 domain 表
+		try {
+			await c.env.db.prepare(`
+				CREATE TABLE IF NOT EXISTS domain (
+					domain_id     INTEGER PRIMARY KEY AUTOINCREMENT,
+					domain        TEXT    NOT NULL UNIQUE,
+					user_id       INTEGER NOT NULL DEFAULT 0,
+					status        TEXT    NOT NULL DEFAULT 'pending',
+					verify_token  TEXT,
+					is_public     INTEGER NOT NULL DEFAULT 0,
+					is_system     INTEGER NOT NULL DEFAULT 0,
+					allow_subdomain INTEGER NOT NULL DEFAULT 0,
+					create_time   TEXT DEFAULT CURRENT_TIMESTAMP,
+					verify_time   TEXT,
+					last_check    TEXT
+				)
+			`).run();
+		} catch (e) {
+			console.warn(`v3_0DB create table: ${e.message}`);
+		}
+
+		
+
+		},
+
+
+	async v3_1DB(c) {
+		try {
+			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN email_retention INTEGER NOT NULL DEFAULT 0;`).run();
+		} catch (e) {
+			console.warn(`跳过字段：${e.message}`);
+		}
+		try {
+			await c.env.db.prepare(`UPDATE setting SET email_retention = 0 WHERE email_retention = 24;`).run();
+		} catch (e) {
+			console.warn(`跳过更新：${e.message}`);
+		}
+	},
+
+	async v3_2DB(c) {
+		try {
+			await c.env.db.prepare(`UPDATE domain SET allow_subdomain = 1 WHERE status = 'verified'`).run();
+		} catch (e) {
+			console.warn(e.message);
+		}
+	},
+
+	async v3_3DB(c) {
+		try {
+			await c.env.db.prepare(`UPDATE domain SET is_system = 0`).run();
+		} catch (e) {
+			console.warn(e.message);
+		}
+	},
+
+	async v3_4DB(c) {
+		try {
+			await c.env.db.prepare(`ALTER TABLE domain ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1;`).run();
+		} catch (e) {
+			console.warn(e.message);
+		}
+	},
+
+	async v3_5DB(c) {
+		try {
+			await c.env.db.prepare(`
+				CREATE TABLE IF NOT EXISTS api_key (
+					api_key_id INTEGER PRIMARY KEY AUTOINCREMENT,
+					user_id INTEGER NOT NULL,
+					name TEXT NOT NULL DEFAULT '',
+					key_hash TEXT NOT NULL,
+					key_prefix TEXT NOT NULL,
+					key TEXT,
+					create_time TEXT DEFAULT CURRENT_TIMESTAMP,
+					last_used_time TEXT
+				)
+			`).run();
+			await c.env.db.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_api_key_hash ON api_key(key_hash);`).run();
+		} catch (e) {
+			console.warn(e.message);
+		}
+		try {
+			await c.env.db.prepare(`ALTER TABLE api_key ADD COLUMN key TEXT;`).run();
+		} catch (e) {
+			console.warn(e.message);
+		}
+	},
+
 
 	async v2_9DB(c) {
 		try {

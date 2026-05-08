@@ -1,11 +1,12 @@
 <template>
   <el-scrollbar class="scroll">
     <div>
-      <div class="title" >
+      <div class="title" :class="{ 'title-collapsed': collapsed }" @click="toggleCollapse" :title="collapsed ? '展开菜单' : '折叠菜单'">
         <Icon icon="mdi:email-outline" width="24" height="24" />
-        <div>{{settingStore.settings.title}}</div>
+        <div v-if="!collapsed">{{settingStore.settings.title}}</div>
+        <Icon v-if="!collapsed" class="collapse-icon" icon="mingcute:left-line" width="14" height="14"/>
       </div>
-      <el-menu :collapse="false" text-color="#fff" active-text-color="#fff" style="margin-top: 10px">
+      <el-menu :collapse="collapsed" text-color="#fff" active-text-color="#fff" style="margin-top: 10px">
         <el-menu-item @click="router.push({name: 'email'})" index="email"
                       :class="route.meta.name === 'email' ? 'choose-item' : ''">
           <Icon icon="hugeicons:mailbox-01" width="20" height="20" />
@@ -31,9 +32,19 @@
           <Icon icon="fluent:settings-48-regular" width="20" height="20" />
           <span class="menu-name" style="margin-left: 21px">{{$t('settings')}}</span>
         </el-menu-item>
-        <div class="manage-title" v-perm="['all-email:query','user:query','role:query','setting:query','analysis:query','reg-key:query']">
+        <el-menu-item @click="router.push({name: 'domain'})" index="domain"
+                      :class="route.meta.name === 'domain' ? 'choose-item' : ''">
+          <Icon icon="mingcute:earth-2-line" width="20" height="20" />
+          <span class="menu-name" style="margin-left: 21px">域名管理</span>
+        </el-menu-item>
+        <div class="manage-title" v-if="!collapsed" v-perm="['all-email:query','user:query','role:query','setting:query','analysis:query','reg-key:query','account:add']">
           <div>{{$t('manage')}}</div>
         </div>
+        <el-menu-item @click="triggerAddEmail" index="add-email" v-perm="'account:add'"
+                      :class="route.meta.name === 'add-email' ? 'choose-item' : ''">
+          <Icon icon="ion:add-circle-outline" width="20" height="20" />
+          <span class="menu-name" style="margin-left: 21px">{{ $t('addAccount') }}</span>
+        </el-menu-item>
         <el-menu-item @click="router.push({name: 'analysis'})" index="analysis" v-perm="'analysis:query'"
                       :class="route.meta.name === 'analysis' ? 'choose-item' : ''">
           <Icon icon="fluent:data-pie-20-regular" width="24" height="24" />
@@ -74,10 +85,23 @@ import router from "@/router/index.js";
 import { useRoute } from "vue-router";
 import {Icon} from "@iconify/vue";
 import {useSettingStore} from "@/store/setting.js";
+import {useUiStore} from "@/store/ui.js";
+import {useAccountStore} from "@/store/account.js";
+import {computed} from "vue";
 
 const settingStore = useSettingStore();
+const uiStore = useUiStore();
+const accountStore = useAccountStore();
 const route = useRoute();
+const collapsed = computed(() => uiStore.asideCollapsed);
 
+function toggleCollapse() {
+  uiStore.asideCollapsed = !uiStore.asideCollapsed;
+}
+
+function triggerAddEmail() {
+  accountStore.addEmailTrigger++;
+}
 </script>
 
 <style lang="scss" scoped>
@@ -98,16 +122,34 @@ const route = useRoute();
   transition: all 0.3s ease;
   max-width: 240px;
   padding: 0 10px;
+  cursor: pointer;
+  user-select: none;
+
+  &.title-collapsed {
+    max-width: 44px;
+    margin: 15px auto;
+    padding: 0;
+  }
   > div {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    max-width: calc(240px - 20px - 30px);
+    max-width: calc(240px - 20px - 50px);
   }
 
   :deep(.el-icon) {
     flex-shrink: 0;
     font-size: 20px;
+  }
+
+  .collapse-icon {
+    position: absolute;
+    right: 8px;
+    opacity: 0.6;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  &:hover .collapse-icon {
+    opacity: 1;
   }
 
   .user-right-icon {
@@ -165,7 +207,7 @@ const route = useRoute();
 
 .el-menu {
   border-right: 0;
-  width: 260px;
+  width: 100%;
 }
 
 :deep(.el-divider__text) {
@@ -176,4 +218,20 @@ const route = useRoute();
 .scroll {
 
 }
+
+/* 折叠模式样式 */
+:deep(.el-menu--collapse) {
+  width: 100% !important;
+
+  .el-menu-item {
+    padding: 0 !important;
+    justify-content: center;
+    margin: 5px 4px !important;
+
+    .menu-name {
+      display: none;
+    }
+  }
+}
+
 </style>

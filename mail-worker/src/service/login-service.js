@@ -1,4 +1,5 @@
 import BizError from '../error/biz-error';
+import domainService from './domain-service';
 import userService from './user-service';
 import emailUtils from '../utils/email-utils';
 import { isDel, settingConst, userConst } from '../const/entity-const';
@@ -61,7 +62,8 @@ const loginService = {
 			throw new BizError(t('pwdMinLength'));
 		}
 
-		if (!c.env.domain.includes(emailUtils.getDomain(email))) {
+		const domainRow = await domainService.findVerifiedDomain(c, emailUtils.getDomain(email), null, false);
+		if (!domainRow) {
 			throw new BizError(t('notEmailDomain'));
 		}
 

@@ -162,11 +162,11 @@ const roleService = {
 			return true
 		}
 
+		const domain = emailUtils.getDomain(email.toLowerCase());
+
 		const availIndex = availDomain.findIndex(item => {
-			const domain = emailUtils.getDomain(email.toLowerCase());
 			const availDomainItem = item.toLowerCase();
-			console.log(domain,availDomainItem)
-			return domain === availDomainItem
+			return domain === availDomainItem || domain.endsWith('.' + availDomainItem)
 		})
 
 		return availIndex > -1
@@ -201,7 +201,7 @@ const roleService = {
 				const banDomain = item.toLowerCase();
 				const receiveDomain = emailUtils.getDomain(fromEmail.toLowerCase());
 
-				if (banDomain === receiveDomain) {
+				if (banDomain === receiveDomain || receiveDomain.endsWith('.' + banDomain)) {
 					return true;
 				}
 

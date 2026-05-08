@@ -1,7 +1,12 @@
 <template>
   <div :class="accountShow && hasPerm('account:query') ? 'main-box-show' : 'main-box-hide'">
     <div :class="accountShow && hasPerm('account:query') ? 'block-show' : 'block-hide'" @click="uiStore.accountShow = false"></div>
-    <account  :class="accountShow && hasPerm('account:query') ? 'show' : 'hide'" />
+    <account  :class="accountShow && hasPerm('account:query') ? 'show' : 'hide'" :style="accountShow ? { width: uiStore.accountWidth + 'px' } : {}" />
+    <div
+      v-if="accountShow"
+      class="resize-handle resize-account"
+      @mousedown="startAccountResize"
+    ></div>
     <router-view class="main-view" v-slot="{ Component,route }">
       <keep-alive :include="['email','all-email','send','sys-setting','star','user','role','analysis','reg-key','draft']">
         <component :is="Component" :key="route.name"/>
@@ -27,6 +32,28 @@ let elNotification = null
 const accountShow = computed(() => {
   return uiStore.accountShow && settingStore.settings.manyEmail === 0
 })
+
+// ── Account panel resize ──
+let startX = 0
+let startWidth = 0
+function startAccountResize(e) {
+  e.preventDefault()
+  startX = e.clientX
+  startWidth = uiStore.accountWidth
+  document.addEventListener('mousemove', onAccountResize)
+  document.addEventListener('mouseup', stopAccountResize)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+function onAccountResize(e) {
+  uiStore.accountWidth = Math.max(180, Math.min(400, startWidth + (e.clientX - startX)))
+}
+function stopAccountResize() {
+  document.removeEventListener('mousemove', onAccountResize)
+  document.removeEventListener('mouseup', stopAccountResize)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
 
 watch(() => uiStore.changeNotice, () => {
 
@@ -146,7 +173,7 @@ const handleResize = () => {
 
 .main-box-show {
   display: grid;
-  grid-template-columns: 260px  1fr;
+  grid-template-columns: auto 4px 1fr;
   height: calc(100% - 60px);
   @media (max-width: 767px) {
     grid-template-columns: 1fr;
@@ -157,6 +184,17 @@ const handleResize = () => {
   display: grid;
   grid-template-columns: 1fr;
   height: calc(100% - 60px);
+}
+
+.resize-handle {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  z-index: 10;
+  &:hover {
+    background: var(--el-color-primary-light-5);
+  }
 }
 
 

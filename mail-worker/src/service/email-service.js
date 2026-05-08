@@ -24,7 +24,7 @@ import telegramService from './telegram-service';
 
 const emailService = {
 
-	async list(c, params, userId) {
+	async list(c, params, userId, isAdmin = false) {
 
 		let { emailId, type, accountId, size, timeSort, allReceive } = params;
 
@@ -48,8 +48,10 @@ const emailService = {
 
 		}
 
+		const accountRow = await accountService.selectById(c, accountId);
+		const targetUserId = isAdmin && accountRow ? accountRow.userId : userId;
+
 		if (isNaN(allReceive)) {
-			let accountRow = await accountService.selectById(c, accountId);
 			allReceive = accountRow.allReceive;
 		}
 
@@ -72,7 +74,7 @@ const emailService = {
 			.where(
 				and(
 					allReceive ? eq(1,1) : eq(email.accountId, accountId),
-					eq(email.userId, userId),
+					eq(email.userId, targetUserId),
 					timeSort ? gt(email.emailId, emailId) : lt(email.emailId, emailId),
 					eq(email.type, type),
 					eq(email.isDel, isDel.NORMAL),
@@ -96,7 +98,7 @@ const emailService = {
 			.where(
 				and(
 					allReceive ? eq(1,1) : eq(email.accountId, accountId),
-					eq(email.userId, userId),
+					eq(email.userId, targetUserId),
 					eq(email.type, type),
 					eq(email.isDel, isDel.NORMAL),
 					eq(account.isDel, isDel.NORMAL)
@@ -106,7 +108,7 @@ const emailService = {
 		const latestEmailQuery = orm(c).select().from(email).where(
 			and(
 				allReceive ? eq(1,1) : eq(email.accountId, accountId),
-				eq(email.userId, userId),
+				eq(email.userId, targetUserId),
 				eq(email.type, type),
 				eq(email.isDel, isDel.NORMAL)
 			))
@@ -126,7 +128,7 @@ const emailService = {
 			latestEmail = {
 				emailId: 0,
 				accountId: accountId,
-				userId: userId,
+				userId: targetUserId,
 			}
 		}
 
@@ -175,10 +177,13 @@ const emailService = {
 		const userRow = await userService.selectById(c, userId);
 		const roleRow = await roleService.selectById(c, userRow.type);
 
-		//判断接收方是不是全部为站内邮箱
+		//判断接收方是不是全部为站内邮箱（支持子域名匹配）
 		const allInternal = receiveEmail.every(email => {
-			const domain = '@' + emailUtils.getDomain(email);
-			return domainList.includes(domain);
+			const domain = emailUtils.getDomain(email);
+			const prefixed = '@' + domain;
+			if (domainList.includes(prefixed)) return true;
+			// 子域名匹配：2138i2.226022.xyz 匹配 @226022.xyz
+			return domainList.some(d => domain.endsWith(d.substring(1)));
 		});
 
 		if (c.env.admin !== userRow.email) {
@@ -229,7 +234,20 @@ const emailService = {
 		}
 
 		const domain = emailUtils.getDomain(accountRow.email);
-		const resendToken = resendTokens[domain];
+		let resendToken = resendTokens[domain];
+		let resendVerifiedDomain = resendToken ? domain : null;
+		// 子域名时向上查找根域名的 token
+		if (!resendToken) {
+			const parts = domain.split('.');
+			for (let i = 1; i < parts.length - 1; i++) {
+				const parent = parts.slice(i).join('.');
+				if (resendTokens[parent]) {
+						resendToken = resendTokens[parent];
+						resendVerifiedDomain = parent;
+						break;
+					}
+			}
+		}
 
 		//如果接收方存在站外邮箱，又没有resend token
 		if (!resendToken && !allInternal) {
@@ -264,13 +282,19 @@ const emailService = {
 			const resend = new Resend(resendToken);
 
 			const sendForm = {
-				from: `${name} <${accountRow.email}>`,
+				from: resendVerifiedDomain && resendVerifiedDomain !== domain
+						? `${name} <${emailUtils.getName(accountRow.email)}@${resendVerifiedDomain}>`
+						: `${name} <${accountRow.email}>`,
 				to: [...receiveEmail],
 				subject: subject,
 				text: text,
 				html: html,
 				attachments: [...imageDataList, ...attachments]
 			};
+
+			if (resendVerifiedDomain && resendVerifiedDomain !== domain) {
+				sendForm.replyTo = accountRow.email;
+			}
 
 			if (sendType === 'reply') {
 				sendForm.headers = {
@@ -448,6 +472,9 @@ const emailService = {
 		for (const emailData of receiveEmailList) {
 
 			const emailRow = await orm(c).insert(email).values(emailData).returning().get();
+			if (emailRow.accountId) {
+				await orm(c).update(account).set({ latestEmailTime: emailRow.createTime }).where(eq(account.accountId, emailRow.accountId)).run();
+			}
 
 			//设置附件保存
 			for (const attRow of attList) {
@@ -527,12 +554,14 @@ const emailService = {
 			.get();
 	},
 
-	async latest(c, params, userId) {
+	async latest(c, params, userId, isAdmin = false) {
 		let { emailId, accountId, allReceive } = params;
 		allReceive = Number(allReceive);
 
+		const accountRow = await accountService.selectById(c, accountId);
+		const targetUserId = isAdmin && accountRow ? accountRow.userId : userId;
+
 		if (isNaN(allReceive)) {
-			let accountRow = await accountService.selectById(c, accountId);
 			allReceive = accountRow.allReceive;
 		}
 
@@ -544,7 +573,7 @@ const emailService = {
 			.where(
 				and(
 					gt(email.emailId, emailId),
-					eq(email.userId, userId),
+					eq(email.userId, targetUserId),
 					eq(email.isDel, isDel.NORMAL),
 					eq(account.isDel, isDel.NORMAL),
 					allReceive ? eq(1,1) : eq(email.accountId, accountId),
@@ -757,6 +786,14 @@ const emailService = {
 	async completeReceiveAll(c) {
 		await c.env.db.prepare(`UPDATE email as e SET status = ${emailConst.status.RECEIVE} WHERE status = ${emailConst.status.SAVING} AND EXISTS (SELECT 1 FROM account WHERE account_id = e.account_id)`).run();
 		await c.env.db.prepare(`UPDATE email as e SET status = ${emailConst.status.NOONE} WHERE status = ${emailConst.status.SAVING} AND NOT EXISTS (SELECT 1 FROM account WHERE account_id = e.account_id)`).run();
+	},
+
+	async cleanExpiredEmails(c) {
+		const setting = await c.env.kv.get(KvConst.SETTING, { type: 'json' });
+		const retention = setting?.emailRetention || 0;
+		if (retention <= 0) return;
+		const cutoff = new Date(Date.now() - retention * 3600 * 1000).toISOString();
+		await c.env.db.prepare(`UPDATE email SET is_del = 1 WHERE create_time < ? AND is_del = 0`).bind(cutoff).run();
 	},
 
 	async batchDelete(c, params) {

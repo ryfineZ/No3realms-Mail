@@ -8,6 +8,7 @@ import constant from '../const/constant';
 import BizError from '../error/biz-error';
 import {t} from '../i18n/i18n'
 import verifyRecordService from './verify-record-service';
+import domainService from './domain-service';
 
 const settingService = {
 
@@ -30,21 +31,13 @@ const settingService = {
 			throw new BizError('数据库未初始化 Database not initialized.');
 		}
 
-		let domainList = c.env.domain;
+		// 从 DB 获取所有已验证域名（单一数据源）
+		let domainList = [];
+		try {
+			const allDomains = await domainService.listAllVerified(c);
+			domainList = allDomains.map(d => '@' + d.domain);
+		} catch {}
 
-		if (typeof domainList === 'string') {
-			try {
-				domainList = JSON.parse(domainList)
-			} catch (error) {
-				throw new BizError(t('notJsonDomain'));
-			}
-		}
-
-		if (!c.env.domain) {
-			throw new BizError(t('noDomainVariable'));
-		}
-
-		domainList = domainList.map(item => '@' + item);
 		setting.domainList = domainList;
 
 
@@ -204,7 +197,8 @@ const settingService = {
 			linuxdoClientId: settingRow.linuxdoClientId,
 			linuxdoCallbackUrl: settingRow.linuxdoCallbackUrl,
 			linuxdoSwitch: settingRow.linuxdoSwitch,
-			minEmailPrefix: settingRow.minEmailPrefix
+			minEmailPrefix: settingRow.minEmailPrefix,
+			emailRetention: settingRow.emailRetention
 		};
 	}
 };

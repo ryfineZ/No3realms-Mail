@@ -53,6 +53,9 @@
                 <Icon v-else icon="solar:star-line-duotone" width="18" height="18"/>
               </div>
               <div v-if="!showStar"></div>
+              <div class="sender-avatar" :style="avatarStyle(item.name)">
+                {{ (item.name || '?')[0].toUpperCase() }}
+              </div>
               <div class="title" :class="accountShow ? 'title-column' : 'title-column'">
 
                 <div class="email-sender" :style=" (showStatus ? 'gap: 10px;' : '') + ((item.unread === EmailUnreadEnum.UNREAD && showUnread)  ? 'font-weight: bold' : '')">
@@ -386,7 +389,7 @@ const itemHeight = computed(() => {
     if (props.type === 'all-email') {
       return isMobile.value ? 132 : 65;
     } else  {
-      return isMobile.value ? 83 : 48;
+      return isMobile.value ? 83 : 60;
     }
 })
 
@@ -882,6 +885,12 @@ function loadData() {
   getEmailList()
 }
 
+const AVATAR_COLORS = ['#1890ff', '#52c41a', '#fa8c16', '#722ed1', '#13c2c2', '#f5222d', '#eb2f96', '#2f54eb'];
+function avatarStyle(name) {
+  const idx = ((name || '?').charCodeAt(0)) % AVATAR_COLORS.length;
+  return { background: AVATAR_COLORS[idx] };
+}
+
 </script>
 <style lang="scss" scoped>
 
@@ -961,9 +970,31 @@ function loadData() {
   align-items: center;
   position: relative;
   transition: background 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-  height: 48px;
+  height: 60px;
   @media (max-width: 1366px) {
     height: 83px;
+  }
+
+  .sender-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-right: 10px;
+    user-select: none;
+    @media (max-width: 1366px) {
+      width: 32px;
+      height: 32px;
+      font-size: 13px;
+      align-self: start;
+      margin-top: 4px;
+    }
   }
 
   @media (pointer: coarse) {

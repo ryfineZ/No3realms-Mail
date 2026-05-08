@@ -30,6 +30,40 @@
         </div>
       </div>
     </div>
+    <div class="api-key-box">
+      <div class="title">API Key</div>
+      <div class="api-key-desc">用于第三方项目调用接口，不会占用网页登录状态。新创建的密钥可随时查看和复制。</div>
+      <div class="api-key-create">
+        <el-input v-model="apiKeyName" placeholder="名称，例如：自动化脚本" maxlength="30" clearable />
+        <el-button type="primary" :loading="apiKeyCreating" @click="createApiKey">创建 API Key</el-button>
+      </div>
+      <el-alert v-if="newApiKey" title="API Key 创建成功，可在下方列表继续查看和复制" type="success" :closable="false" show-icon>
+        <template #default>
+          <div class="new-api-key">
+            <code>{{ newApiKey }}</code>
+            <el-button size="small" type="primary" @click="copyApiKey(newApiKey)">复制</el-button>
+          </div>
+        </template>
+      </el-alert>
+      <div class="api-key-list" v-loading="apiKeyLoading">
+        <div class="api-key-empty" v-if="apiKeys.length === 0">暂无 API Key</div>
+        <div class="api-key-item" v-for="item in apiKeys" :key="item.apiKeyId">
+          <div>
+            <strong>{{ item.name }}</strong>
+            <span>{{ visibleApiKeyId === item.apiKeyId && item.key ? item.key : item.keyPreview }}</span>
+            <em>创建于 {{ formatTime(item.createTime) }} · 最近使用 {{ item.lastUsedTime ? formatTime(item.lastUsedTime) : '从未使用' }}</em>
+          </div>
+          <div class="api-key-actions">
+            <el-button v-if="item.key" plain @click="toggleApiKeyVisible(item)">{{ visibleApiKeyId === item.apiKeyId ? '隐藏' : '查看' }}</el-button>
+            <el-button v-if="item.key" type="primary" plain @click="copyApiKey(item.key)">复制</el-button>
+            <el-tooltip v-else content="旧 API Key 只保存了哈希，无法查看完整密钥，请重建后使用查看和复制">
+              <el-button plain disabled>无法查看</el-button>
+            </el-tooltip>
+            <el-button type="danger" plain @click="deleteApiKey(item)">删除</el-button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="del-email" v-perm="'my:delete'">
       <div class="title">{{$t('deleteUser')}}</div>
       <div style="color: var(--regular-text-color);">
@@ -49,8 +83,8 @@
   </div>
 </template>
 <script setup>
-import {reactive, ref, defineOptions} from 'vue'
-import {resetPassword, userDelete} from "@/request/my.js";
+import {reactive, ref, defineOptions, onMounted} from 'vue'
+import {apiKeyCreate, apiKeyDelete, apiKeyList, resetPassword, userDelete} from "@/request/my.js";
 import {useUserStore} from "@/store/user.js";
 import router from "@/router/index.js";
 import {accountSetName} from "@/request/account.js";
@@ -63,6 +97,12 @@ const userStore = useUserStore();
 const setPwdLoading = ref(false)
 const setNameShow = ref(false)
 const accountName = ref(null)
+const apiKeys = ref([])
+const apiKeyName = ref('')
+const apiKeyLoading = ref(false)
+const apiKeyCreating = ref(false)
+const newApiKey = ref('')
+const visibleApiKeyId = ref(null)
 
 defineOptions({
   name: 'setting'
@@ -113,6 +153,56 @@ const form = reactive({
   newPwd: '',
 })
 
+async function loadApiKeys() {
+  apiKeyLoading.value = true
+  try {
+    apiKeys.value = await apiKeyList()
+  } finally {
+    apiKeyLoading.value = false
+  }
+}
+
+async function createApiKey() {
+  apiKeyCreating.value = true
+  try {
+    const row = await apiKeyCreate(apiKeyName.value.trim())
+    newApiKey.value = row.key
+    apiKeyName.value = ''
+    await loadApiKeys()
+    ElMessage({ message: t('addSuccessMsg'), type: 'success', plain: true })
+  } finally {
+    apiKeyCreating.value = false
+  }
+}
+
+async function copyApiKey(key) {
+  await navigator.clipboard.writeText(key)
+  ElMessage({ message: t('copySuccessMsg'), type: 'success', plain: true })
+}
+
+function toggleApiKeyVisible(item) {
+  visibleApiKeyId.value = visibleApiKeyId.value === item.apiKeyId ? null : item.apiKeyId
+}
+
+function deleteApiKey(item) {
+  ElMessageBox.confirm(`确认删除 ${item.name} 吗？`, {
+    confirmButtonText: t('confirm'),
+    cancelButtonText: t('cancel'),
+    type: 'warning'
+  }).then(async () => {
+    await apiKeyDelete(item.apiKeyId)
+    if (newApiKey.value && item.keyPreview && newApiKey.value.startsWith(item.keyPreview.replace('...', ''))) {
+      newApiKey.value = ''
+    }
+    await loadApiKeys()
+    ElMessage({ message: t('delSuccessMsg'), type: 'success', plain: true })
+  })
+}
+
+function formatTime(value) {
+  return value || '-'
+}
+
 const deleteConfirm = () => {
   ElMessageBox.confirm(t('delAccountConfirm'), {
     confirmButtonText: t('confirm'),
@@ -131,6 +221,10 @@ const deleteConfirm = () => {
   })
 }
 
+
+onMounted(() => {
+  loadApiKeys()
+})
 
 function submitPwd() {
 
@@ -249,11 +343,105 @@ function submitPwd() {
     }
   }
 
+  .api-key-box,
   .del-email {
     font-size: 14px;
     display: flex;
     flex-direction: column;
     gap: 20px;
+  }
+
+  .api-key-box {
+    margin-bottom: 40px;
+  }
+
+  .api-key-desc,
+  .api-key-empty {
+    color: var(--regular-text-color);
+  }
+
+  .api-key-create {
+    display: flex;
+    gap: 12px;
+
+    .el-input {
+      max-width: 320px;
+    }
+  }
+
+  .new-api-key {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+
+    code {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .api-key-list {
+    display: grid;
+    gap: 12px;
+    min-height: 40px;
+  }
+
+  .api-key-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px;
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: var(--el-border-radius-base);
+
+    > div:first-child {
+      min-width: 0;
+      display: grid;
+      gap: 6px;
+    }
+
+    strong,
+    span,
+    em {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    span {
+      font-family: monospace;
+    }
+
+    em {
+      color: var(--regular-text-color);
+      font-style: normal;
+      font-size: 12px;
+    }
+  }
+
+  .api-key-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 767px) {
+    .api-key-create,
+    .api-key-item,
+    .new-api-key,
+    .api-key-actions {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .api-key-create .el-input {
+      max-width: none;
+    }
   }
 }
 </style>

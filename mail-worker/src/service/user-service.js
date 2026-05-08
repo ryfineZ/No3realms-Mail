@@ -2,7 +2,7 @@ import BizError from '../error/biz-error';
 import accountService from './account-service';
 import orm from '../entity/orm';
 import user from '../entity/user';
-import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { emailConst, isDel, roleConst, userConst } from '../const/entity-const';
 import kvConst from '../const/kv-const';
 import KvConst from '../const/kv-const';
@@ -14,6 +14,7 @@ import roleService from './role-service';
 import emailUtils from '../utils/email-utils';
 import saltHashUtils from '../utils/crypto-utils';
 import constant from '../const/constant';
+import domainService from './domain-service';
 import { t } from '../i18n/i18n'
 import reqUtils from '../utils/req-utils';
 import {oauth} from "../entity/oauth";
@@ -130,7 +131,16 @@ const userService = {
 
 
 		if (email) {
-			conditions.push(sql`${user.email} COLLATE NOCASE LIKE ${'%'+ email + '%'}`);
+			// 同时搜索 user.email 和 account.email（支持子域名邮箱）
+			const accountUserIds = await accountService.searchUserIdsByEmail(c, email);
+			if (accountUserIds.length > 0) {
+				conditions.push(or(
+					sql`${user.email} COLLATE NOCASE LIKE ${'%' + email + '%'}`,
+					inArray(user.userId, accountUserIds)
+				));
+			} else {
+				conditions.push(sql`${user.email} COLLATE NOCASE LIKE ${'%' + email + '%'}`);
+			}
 		}
 
 
@@ -306,7 +316,8 @@ const userService = {
 
 		const { email, type, password } = params;
 
-		if (!c.env.domain.includes(emailUtils.getDomain(email))) {
+		const domainRow = await domainService.findVerifiedDomain(c, emailUtils.getDomain(email), null, true);
+			if (!domainRow) {
 			throw new BizError(t('notEmailDomain'));
 		}
 

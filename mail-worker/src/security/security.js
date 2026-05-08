@@ -5,6 +5,7 @@ import KvConst from '../const/kv-const';
 import dayjs from 'dayjs';
 import userService from '../service/user-service';
 import permService from '../service/perm-service';
+import apiKeyService from '../service/api-key-service';
 import { t } from '../i18n/i18n'
 import app from '../hono/hono';
 
@@ -18,7 +19,9 @@ const exclude = [
 	'/public/genToken',
 	'/telegram',
 	'/test',
-	'/oauth'
+	'/oauth',
+	'/domain/public', // 公开域名列表，无需认证
+	'/temp/',         // 临时邮箱，无需认证
 ];
 
 const requirePerms = [
@@ -56,7 +59,10 @@ const requirePerms = [
 	'/regKey/list',
 	'/regKey/delete',
 	'/regKey/clearNotUse',
-	'/regKey/history'
+	'/regKey/history',
+	'/domain/admin',
+	'/domain/adminApprove',
+	'/domain/adminReject',
 ];
 
 const premKey = {
@@ -85,6 +91,7 @@ const premKey = {
 	'reg-key:add': ['/regKey/add'],
 	'reg-key:query': ['/regKey/list','/regKey/history'],
 	'reg-key:delete': ['/regKey/delete','/regKey/clearNotUse'],
+	'domain:admin': ['/domain/admin', '/domain/adminApprove', '/domain/adminReject'],
 };
 
 app.use('*', async (c, next) => {
@@ -109,24 +116,43 @@ app.use('*', async (c, next) => {
 		return await next();
 	}
 
-
-	const jwt = c.req.header(constant.TOKEN_HEADER);
-
-	const result = await jwtUtils.verifyToken(c, jwt);
-
-	if (!result) {
-		throw new BizError(t('authExpired'), 401);
+	// GET /share/:shareId 允许公开访问（查看分享内容），创建/删除需认证
+	if (path.startsWith('/share/') && c.req.method === 'GET') {
+		return await next();
 	}
 
-	const { userId, token } = result;
-	const authInfo = await c.env.kv.get(KvConst.AUTH_INFO + userId, { type: 'json' });
 
-	if (!authInfo) {
-		throw new BizError(t('authExpired'), 401);
+	const authorization = c.req.header(constant.TOKEN_HEADER);
+	const apiKey = parseApiKey(authorization);
+	let currentUser = null;
+	let authInfo = null;
+
+	if (apiKey) {
+		const apiKeyAuth = await apiKeyService.auth(c, apiKey);
+		if (apiKeyAuth) {
+			currentUser = apiKeyAuth.user;
+		}
 	}
 
-	if (!authInfo.tokens.includes(token)) {
-		throw new BizError(t('authExpired'), 401);
+	if (!currentUser) {
+		const result = await jwtUtils.verifyToken(c, authorization);
+
+		if (!result) {
+			throw new BizError(t('authExpired'), 401);
+		}
+
+		const { userId, token } = result;
+		authInfo = await c.env.kv.get(KvConst.AUTH_INFO + userId, { type: 'json' });
+
+		if (!authInfo) {
+			throw new BizError(t('authExpired'), 401);
+		}
+
+		if (!authInfo.tokens.includes(token)) {
+			throw new BizError(t('authExpired'), 401);
+		}
+
+		currentUser = authInfo.user;
 	}
 
 	const permIndex = requirePerms.findIndex(item => {
@@ -135,7 +161,7 @@ app.use('*', async (c, next) => {
 
 	if (permIndex > -1) {
 
-		const permKeys = await permService.userPermKeys(c, authInfo.user.userId);
+		const permKeys = await permService.userPermKeys(c, currentUser.userId);
 
 		const userPaths = permKeyToPaths(permKeys);
 
@@ -143,25 +169,34 @@ app.use('*', async (c, next) => {
 			return path.startsWith(item);
 		});
 
-		if (userPermIndex === -1 && authInfo.user.email !== c.env.admin) {
+		if (userPermIndex === -1 && currentUser.email !== c.env.admin) {
 			throw new BizError(t('unauthorized'), 403);
 		}
 
 	}
 
-	const refreshTime = dayjs(authInfo.refreshTime).startOf('day');
-	const nowTime = dayjs().startOf('day')
+	if (authInfo) {
+		const refreshTime = dayjs(authInfo.refreshTime).startOf('day');
+		const nowTime = dayjs().startOf('day')
 
-	if (!nowTime.isSame(refreshTime)) {
-		authInfo.refreshTime = dayjs().toISOString();
-		await userService.updateUserInfo(c, authInfo.user.userId);
-		await c.env.kv.put(KvConst.AUTH_INFO + userId, JSON.stringify(authInfo), { expirationTtl: constant.TOKEN_EXPIRE });
+		if (!nowTime.isSame(refreshTime)) {
+			authInfo.refreshTime = dayjs().toISOString();
+			await userService.updateUserInfo(c, currentUser.userId);
+			await c.env.kv.put(KvConst.AUTH_INFO + currentUser.userId, JSON.stringify(authInfo), { expirationTtl: constant.TOKEN_EXPIRE });
+		}
 	}
 
-	c.set('user',authInfo.user)
+	c.set('user', currentUser)
 
 	return await next();
 });
+
+function parseApiKey(authorization) {
+	if (!authorization) return null;
+	const value = authorization.trim();
+	if (value.startsWith('Bearer ')) return value.slice(7).trim();
+	return value;
+}
 
 function permKeyToPaths(permKeys) {
 

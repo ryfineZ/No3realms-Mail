@@ -131,6 +131,9 @@ export const settingConst = {
 	authRefresh: {
 		OPEN: 1,
 		CLOSE: 0
+	},
+	emailRetention: {
+		DEFAULT: 0
 	}
 }
 
