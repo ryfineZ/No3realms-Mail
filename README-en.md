@@ -1,25 +1,25 @@
 <p align="center">
     <img src="doc/demo/logo.png" width="80px" />
-    <h1 align="center">Cloud Mail</h1>
+    <h1 align="center">No3realms Mail</h1>
     <p align="center">A simple, responsive email service designed to run on Cloudflare Workers 🎉</p> 
     <p align="center">
        <a href="/README.md" style="margin-left: 5px">简体中文</a> | English 
     </p>
     <p align="center">
-        <a href="https://github.com/maillab/cloud-mail/tree/main?tab=MIT-1-ov-file" target="_blank" >
+        <a href="https://github.com/ryfineZ/No3realms-Mail/tree/main?tab=MIT-1-ov-file" target="_blank" >
             <img src="https://img.shields.io/badge/license-MIT-green" />
         </a>    
-        <a href="https://github.com/maillab/cloud-mail/releases" target="_blank" >
-            <img src="https://img.shields.io/github/v/release/maillab/cloud-mail" alt="releases" />
+        <a href="https://github.com/ryfineZ/No3realms-Mail/releases" target="_blank" >
+            <img src="https://img.shields.io/github/v/release/ryfineZ/No3realms-Mail" alt="releases" />
         </a>  
-        <a href="https://github.com/maillab/cloud-mail/issues" >
-            <img src="https://img.shields.io/github/issues/maillab/cloud-mail" alt="issues" />
+        <a href="https://github.com/ryfineZ/No3realms-Mail/issues" >
+            <img src="https://img.shields.io/github/issues/ryfineZ/No3realms-Mail" alt="issues" />
         </a>  
-        <a href="https://github.com/maillab/cloud-mail/stargazers" target="_blank">
-            <img src="https://img.shields.io/github/stars/maillab/cloud-mail" alt="stargazers" />
+        <a href="https://github.com/ryfineZ/No3realms-Mail/stargazers" target="_blank">
+            <img src="https://img.shields.io/github/stars/ryfineZ/No3realms-Mail" alt="stargazers" />
         </a>  
-        <a href="https://github.com/maillab/cloud-mail/forks" target="_blank" >
-            <img src="https://img.shields.io/github/forks/maillab/cloud-mail" alt="forks" />
+        <a href="https://github.com/ryfineZ/No3realms-Mail/forks" target="_blank" >
+            <img src="https://img.shields.io/github/forks/ryfineZ/No3realms-Mail" alt="forks" />
         </a>
     </p>
     <p align="center">
@@ -33,8 +33,8 @@
 With only one domain, you can create multiple different email addresses, similar to major email platforms. This project can be deployed on Cloudflare Workers to reduce server costs and build your own email service.
 ## Project Showcase
 
-- [Live Demo](https://skymail.ink)<br>
-- [Deployment Guide](https://doc.skymail.ink/en/)<br>
+- [Live Demo](https://mail.3jiezhiwai.com)<br>
+- [API Docs](https://mail.3jiezhiwai.com/api-docs)<br>
 
 
 | ![](/doc/demo/demo1.png) | ![](/doc/demo/demo2.png) |
@@ -53,7 +53,7 @@ With only one domain, you can create multiple different email addresses, similar
 
 - **📦 Attachment Support**: Send and receive attachments, stored and downloaded via R2 object storage.
 
-- **🔔 Email Push**: Forward received emails to Telegram bots or other email providers.
+- **🔔 Email Push**: Forward received emails to other email providers.
 
 - **📡 Open API**: Supports batch user creation via API and multi-condition email queries
 
@@ -88,7 +88,7 @@ With only one domain, you can create multiple different email addresses, similar
 ## Project Structure
 
 ```
-cloud-mail
+No3realms-Mail
 ├── mail-worker				    # Backend worker project
 │   ├── src                  
 │   │   ├── api	 			    # API layer
@@ -133,14 +133,8 @@ cloud-mail
 
 ## Support
 
-<a href="https://doc.skymail.ink/support.html">
-<img width="170px" src="./doc/images/support.png" alt="">
-</a>
+<img width="220px" src="./doc/images/support.png" alt="No3realms Mail support QR">
 
 ## License
 
 This project is licensed under the [MIT](LICENSE) license.
-
-## Communication
-
-[Telegram](https://t.me/cloud_mail_tg)

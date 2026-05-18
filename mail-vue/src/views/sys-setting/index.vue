@@ -250,15 +250,6 @@
             <div class="card-title">{{ $t('emailPush') }}</div>
             <div class="card-content">
               <div class="setting-item">
-                <div><span>{{ $t('tgBot') }}</span></div>
-                <div class="forward">
-                  <span>{{ setting.tgBotStatus === 0 ? $t('enabled') : $t('disabled') }}</span>
-                  <el-button class="opt-button" size="small" type="primary" @click="openTgSetting">
-                    <Icon icon="fluent:settings-48-regular" width="18" height="18"/>
-                  </el-button>
-                </div>
-              </div>
-              <div class="setting-item">
                 <div><span>{{ $t('otherEmail') }}</span></div>
                 <div class="forward">
                   <span>{{ setting.forwardStatus === 0 ? $t('enabled') : $t('disabled') }}</span>
@@ -371,7 +362,7 @@
               <div class="concerning-item">
                 <span>{{ $t('version') }} :</span>
                 <el-badge is-dot :hidden="!hasUpdate">
-                  <el-button @click="jump('https://github.com/maillab/cloud-mail/releases')">
+                  <el-button @click="jump('https://github.com/ryfineZ/No3realms-Mail/releases')">
                     {{ currentVersion }}
                     <template #icon>
                       <Icon icon="qlementine-icons:version-control-16" style="font-size: 20px" color="#1890FF"/>
@@ -382,23 +373,17 @@
               <div class="concerning-item">
                 <span>{{ $t('community') }} : </span>
                 <div class="community">
-                  <el-button @click="jump('https://github.com/maillab/cloud-mail')">
+                  <el-button @click="jump('https://github.com/ryfineZ/No3realms-Mail')">
                     Github
                     <template #icon>
                       <Icon icon="codicon:github-inverted" width="22" height="22"/>
-                    </template>
-                  </el-button>
-                  <el-button @click="jump('https://t.me/cloud_mail_tg')">
-                    Telegram
-                    <template #icon>
-                      <Icon icon="logos:telegram" width="30" height="30"/>
                     </template>
                   </el-button>
                 </div>
               </div>
               <div class="concerning-item">
                 <span>{{ $t('support') }} : </span>
-                <el-button @click="jump('https://doc.skymail.ink/support.html')">
+                <el-button @click="jump('/support.png')">
                   {{ t('supportDesc') }}
                   <template #icon>
                     <Icon color="#79D6B5" icon="simple-icons:buymeacoffee" width="20" height="20"/>
@@ -407,7 +392,7 @@
               </div>
               <div class="concerning-item">
                 <span>{{ $t('help') }} : </span>
-                <el-button @click="jump('https://doc.skymail.ink')">
+                <el-button @click="jump('https://mail.3jiezhiwai.com/api-docs')">
                   {{ t('document') }}
                   <template #icon>
                     <Icon color="#79D6B5" icon="fluent-color:document-32" width="18" height="18"/>
@@ -490,67 +475,6 @@
           </el-button>
           <el-button type="primary" :loading="settingLoading" @click="saveBackground">{{ $t('save') }}</el-button>
         </div>
-      </el-dialog>
-      <el-dialog
-          v-model="tgSettingShow"
-          class="forward-dialog"
-      >
-        <template #header>
-          <div class="forward-head">
-            <span class="forward-set-title">{{ $t('tgBot') }}</span>
-            <el-tooltip effect="dark" :content="$t('tgBotDesc')">
-              <Icon class="warning" icon="fe:warning" width="18" height="18"/>
-            </el-tooltip>
-          </div>
-        </template>
-        <div class="forward-set-body">
-          <el-input :placeholder="$t('tgBotToken')" v-model="tgBotToken"></el-input>
-          <el-input-tag tag-type="warning" :placeholder="$t('toBotTokenDesc')" v-model="tgChatId"
-                        @add-tag="addChatTag"></el-input-tag>
-          <el-input tag-type="warning" :placeholder="$t('customDomainDesc')" v-model="customDomain" ></el-input>
-          <div class="tg-msg-label">
-            <span>{{t('from')}}</span>
-            <el-select  v-model="tgMsgFrom" >
-              <el-option
-                  v-for="item in tgMsgFromOption"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-              />
-            </el-select>
-          </div>
-          <div class="tg-msg-label">
-            <span>{{t('recipient')}}</span>
-            <el-select  v-model="tgMsgTo" >
-              <el-option
-                  v-for="item in tgMsgToOption"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-              />
-            </el-select>
-          </div>
-          <div class="tg-msg-label">
-            <span>{{t('emailText')}}</span>
-            <el-select  v-model="tgMsgText" >
-              <el-option
-                  v-for="item in tgMsgTextOption"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-              />
-            </el-select>
-          </div>
-        </div>
-        <template #footer>
-          <div class="dialog-footer">
-            <el-switch v-model="tgBotStatus" :active-value="0" :inactive-value="1" :active-text="$t('enable')"
-                       :inactive-text="$t('disable')"/>
-            <el-button :loading="settingLoading" type="primary" @click="tgBotSave">
-              {{ $t('save') }}
-            </el-button>
-          </div>
-        </template>
       </el-dialog>
       <el-dialog
           v-model="thirdEmailShow"
@@ -767,7 +691,7 @@ defineOptions({
   name: 'sys-setting'
 })
 
-const currentVersion = 'v2.9.0'
+const currentVersion = 'v1.0.0'
 const hasUpdate = ref(false)
 let getUpdateErrorCount = 1;
 const {t, locale} = useI18n();
@@ -780,7 +704,6 @@ const editTitleShow = ref(false)
 const resendTokenFormShow = ref(false)
 const r2DomainShow = ref(false)
 const turnstileShow = ref(false)
-const tgSettingShow = ref(false)
 const noticePopupShow = ref(false)
 const thirdEmailShow = ref(false)
 const forwardRulesShow = ref(false)
@@ -849,25 +772,12 @@ const authRefreshOptions = computed(() => [
   {label: '20s', value: 20},
 ])
 
-const tgChatId = ref([])
-const customDomain = ref('')
-const tgBotStatus = ref(0)
-const tgBotToken = ref('')
 const forwardEmail = ref([])
 const forwardStatus = ref(0)
 const emailColumnWidth = ref(0)
 const tokenColumnWidth = ref(0)
 const ruleType = ref(0)
 const ruleEmail = ref([])
-const tgMsgFrom = ref('')
-const tgMsgTo = ref('')
-const tgMsgText = ref('')
-
-const tgMsgFromOption = [{label: t('show'), value: 'show'}, {label: t('hide'), value: 'hide'}, {label: t('onlyName'), value:'only-name'}]
-const tgMsgToOption = [{label: t('show'), value: 'show'}, {label: t('hide'), value: 'hide'}]
-const tgMsgTextOption = [{label: t('show'), value: 'show'}, {label: t('hide'), value: 'hide'}]
-const tgMsgLabelWidth = computed(() => locale.value === 'en' ? '120px' : '100px');
-
 getSettings()
 getUpdate()
 
@@ -938,7 +848,7 @@ const resendList = computed(() => {
 
 function getUpdate() {
   if (getUpdateErrorCount > 5 || !getUpdateErrorCount) return
-  axios.get('https://api.github.com/repos/maillab/cloud-mail/releases/latest').then(({data}) => {
+  axios.get('https://api.github.com/repos/ryfineZ/No3realms-Mail/releases/latest').then(({data}) => {
     hasUpdate.value = data.name !== currentVersion
     getUpdateErrorCount = 0
   }).catch(e => {
@@ -977,21 +887,6 @@ function closedSetBackground() {
   backgroundImage.value = ''
   localUpShow.value = false
   backgroundUrl.value = setting.value.background?.startsWith('http') ? setting.value.background : ''
-}
-
-function openTgSetting() {
-  tgBotStatus.value = setting.value.tgBotStatus
-  tgBotToken.value = setting.value.tgBotToken
-  customDomain.value = setting.value.customDomain
-  tgMsgFrom.value = setting.value.tgMsgFrom
-  tgMsgText.value = setting.value.tgMsgText
-  tgMsgTo.value = setting.value.tgMsgTo
-  tgChatId.value = []
-  if (setting.value.tgChatId) {
-    const list = setting.value.tgChatId.split(',')
-    tgChatId.value.push(...list)
-  }
-  tgSettingShow.value = true
 }
 
 function openNoticePopupSetting() {
@@ -1076,21 +971,6 @@ function ruleEmailAddTag(val) {
   })
 }
 
-function addChatTag(val) {
-
-  const chatIds = Array.from(new Set(
-      val.split(/[,，]/).map(item => item.trim()).filter(item => item)
-  ));
-
-  tgChatId.value.splice(tgChatId.value.length - 1, 1)
-
-  chatIds.forEach(id => {
-    if (!isNaN(Number(id))) {
-      tgChatId.value.push(id)
-    }
-  })
-}
-
 function clearS3() {
 
   const form = {
@@ -1117,19 +997,6 @@ function saveS3() {
   if (s3.s3AccessKey) form.s3AccessKey = s3.s3AccessKey
   if (s3.s3SecretKey) form.s3SecretKey = s3.s3SecretKey
 
-  editSetting(form)
-}
-
-function tgBotSave() {
-  const form = {
-    tgBotToken: tgBotToken.value,
-    customDomain: customDomain.value,
-    tgBotStatus: tgBotStatus.value,
-    tgChatId: tgChatId.value + '',
-    tgMsgFrom: tgMsgFrom.value,
-    tgMsgText: tgMsgText.value,
-    tgMsgTo: tgMsgTo.value
-  }
   editSetting(form)
 }
 
@@ -1327,7 +1194,6 @@ function editSetting(settingForm, refreshStatus = true) {
     r2DomainShow.value = false
     resendTokenFormShow.value = false
     turnstileShow.value = false
-    tgSettingShow.value = false
     thirdEmailShow.value = false
     forwardRulesShow.value = false
     addVerifyCountShow.value = false
@@ -1663,15 +1529,6 @@ function editSetting(settingForm, refreshStatus = true) {
     margin-bottom: 15px;
   }
 
-  .tg-msg-label {
-    margin-top: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    .el-select {
-      width: v-bind(tgMsgLabelWidth);
-    }
-  }
 }
 
 .forward {

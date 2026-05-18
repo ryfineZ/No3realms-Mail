@@ -41,3 +41,15 @@ export function userAllAccount(userId, num, size) {
 export function userDeleteAccount(accountId) {
     return http.delete('/user/deleteAccount', {params:{accountId}})
 }
+
+export function userApiKeyList(userId) {
+    return http.get('/apiKey/list', {params: {userId}})
+}
+
+export function userApiKeyCreate(userId, name) {
+    return http.post('/apiKey/create', {userId, name})
+}
+
+export function userApiKeyDelete(userId, apiKeyId) {
+    return http.delete('/apiKey/delete', {params: {userId, apiKeyId}})
+}

@@ -71,7 +71,7 @@ const cloudflareProvider = {
 				matchers: [{ type: 'all' }],
 				actions: [{ type: 'worker', value: [WORKER_NAME] }],
 				enabled: true,
-				name: 'Cloud Mail catch-all',
+				name: 'No3realms Mail catch-all',
 			}),
 		});
 		const data = await res.json();

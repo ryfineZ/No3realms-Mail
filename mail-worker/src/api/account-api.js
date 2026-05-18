@@ -11,7 +11,7 @@ app.get('/account/list', async (c) => {
 });
 
 app.delete('/account/delete', async (c) => {
-	await accountService.delete(c, c.req.query(), userContext.getUserId(c));
+	await accountService.delete(c, c.req.query(), userContext.getUser(c));
 	return c.json(result.ok());
 });
 

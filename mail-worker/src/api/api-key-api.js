@@ -4,16 +4,16 @@ import apiKeyService from '../service/api-key-service';
 import userContext from '../security/user-context';
 
 app.get('/apiKey/list', async (c) => {
-	const list = await apiKeyService.list(c, userContext.getUserId(c));
+	const list = await apiKeyService.listForTarget(c, c.req.query(), userContext.getUser(c));
 	return c.json(result.ok(list));
 });
 
 app.post('/apiKey/create', async (c) => {
-	const row = await apiKeyService.create(c, await c.req.json(), userContext.getUserId(c));
+	const row = await apiKeyService.createForTarget(c, await c.req.json(), userContext.getUser(c));
 	return c.json(result.ok(row));
 });
 
 app.delete('/apiKey/delete', async (c) => {
-	await apiKeyService.delete(c, c.req.query(), userContext.getUserId(c));
+	await apiKeyService.deleteForTarget(c, c.req.query(), userContext.getUser(c));
 	return c.json(result.ok());
 });

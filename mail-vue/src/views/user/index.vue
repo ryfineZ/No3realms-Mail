@@ -97,6 +97,7 @@
                       <el-dropdown-item v-else @click="restore(props.row)">{{ $t('restore') }}</el-dropdown-item>
                     </template>
                     <el-dropdown-item @click="openAccountList(props.row.userId)" >{{ $t('account') }}</el-dropdown-item>
+                    <el-dropdown-item v-if="canManageApiKey(props.row)" @click="openApiKeyList(props.row)" >API Key</el-dropdown-item>
                     <el-dropdown-item @click="openDetails(props.row)" >{{ $t('details') }}</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -182,6 +183,16 @@
         <el-select v-model="addForm.type" :placeholder="$t('perm')">
           <el-option v-for="item in roleList" :label="item.name" :value="item.roleId" :key="item.roleId"/>
         </el-select>
+        <el-checkbox v-if="userStore.user.type === 0" v-model="addForm.createApiKey" class="api-key-option">
+          同时创建 API Key
+        </el-checkbox>
+        <el-input
+            v-if="userStore.user.type === 0 && addForm.createApiKey"
+            v-model="addForm.apiKeyName"
+            placeholder="API Key 名称，例如：后台脚本"
+            maxlength="30"
+            clearable
+        />
         <el-button class="btn" type="primary" @click="submit" :loading="addLoading"
         >{{ $t('add') }}
         </el-button>
@@ -223,6 +234,46 @@
             :total="accountParams.total"
             @current-change="accountCurChange"
         />
+      </div>
+    </el-dialog>
+    <el-dialog class="api-key-dialog" v-model="apiKeyShow" :title="`${apiKeyUser?.email || '用户'} 的 API Key`" @closed="resetApiKeyDialog">
+      <div class="api-key-dialog-body">
+        <div class="api-key-create">
+          <el-input
+              v-model="apiKeyName"
+              placeholder="名称，例如：后台脚本"
+              maxlength="30"
+              clearable
+              @keyup.enter="createUserApiKey"
+          />
+          <el-button type="primary" :loading="apiKeyCreating" @click="createUserApiKey">创建 API Key</el-button>
+        </div>
+        <el-alert v-if="newApiKey" title="API Key 创建成功，请复制保存" type="success" :closable="false" show-icon>
+          <template #default>
+            <div class="new-api-key">
+              <code>{{ newApiKey }}</code>
+              <el-button size="small" type="primary" @click="copyApiKey(newApiKey)">复制</el-button>
+            </div>
+          </template>
+        </el-alert>
+        <div class="api-key-list" v-loading="apiKeyLoading">
+          <div class="api-key-empty" v-if="apiKeys.length === 0 && !apiKeyLoading">暂无 API Key</div>
+          <div class="api-key-item" v-for="item in apiKeys" :key="item.apiKeyId">
+            <div>
+              <strong>{{ item.name }}</strong>
+              <span>{{ visibleApiKeyId === item.apiKeyId && item.key ? item.key : item.keyPreview }}</span>
+              <em>创建于 {{ formatApiKeyTime(item.createTime) }} · 最近使用 {{ item.lastUsedTime ? formatApiKeyTime(item.lastUsedTime) : '从未使用' }}</em>
+            </div>
+            <div class="api-key-actions">
+              <el-button v-if="item.key" plain @click="toggleApiKeyVisible(item)">{{ visibleApiKeyId === item.apiKeyId ? '隐藏' : '查看' }}</el-button>
+              <el-button v-if="item.key" type="primary" plain @click="copyApiKey(item.key)">复制</el-button>
+              <el-tooltip v-else content="旧 API Key 只保存了哈希，无法查看完整密钥，请重建后使用查看和复制">
+                <el-button plain disabled>无法查看</el-button>
+              </el-tooltip>
+              <el-button type="danger" plain @click="deleteUserApiKey(item)">删除</el-button>
+            </div>
+          </div>
+        </div>
       </div>
     </el-dialog>
     <el-dialog class="account-dialog" v-model="detailsShow" :title="t('userDetails')"  >
@@ -342,6 +393,14 @@
               </div>
             </template>
           </el-dropdown-item>
+          <el-dropdown-item v-if="canManageApiKey(rightClickUser)" @click="openApiKeyList(rightClickUser)" >
+            <template #default>
+              <div class="right-dropdown-item" >
+                <Icon icon="mdi:key-variant" width="20" height="20" />
+                <span>API Key</span>
+              </div>
+            </template>
+          </el-dropdown-item>
           <el-dropdown-item @click="openDetails(rightClickUser)" >
             <template #default>
               <div class="right-dropdown-item" >
@@ -376,7 +435,10 @@ import {
   userRestSendCount,
   userRestore,
   userDeleteAccount,
-  userAllAccount
+  userAllAccount,
+  userApiKeyList,
+  userApiKeyCreate,
+  userApiKeyDelete
 } from '@/request/user.js'
 import {roleSelectUse} from "@/request/role.js";
 import {Icon} from "@iconify/vue";
@@ -441,6 +503,8 @@ const addForm = reactive({
   suffix: settingStore.domainList[0],
   password: '',
   type: null,
+  createApiKey: false,
+  apiKeyName: '',
 })
 
 const params = reactive({
@@ -459,15 +523,23 @@ const userForm = reactive({
 
 const showAdd = ref(false)
 const accountShow = ref(false)
+const apiKeyShow = ref(false)
 const addLoading = ref(false);
 const setTypeShow = ref(false)
 const setPwdShow = ref(false)
 const pagerCount = ref(10)
 const settingLoading = ref(false)
 const tableLoading = ref(true)
+const apiKeyLoading = ref(false)
+const apiKeyCreating = ref(false)
 const roleList = reactive([])
 const mySelect = ref({})
 const accountList = reactive([])
+const apiKeys = ref([])
+const apiKeyUser = ref(null)
+const apiKeyName = ref('')
+const newApiKey = ref('')
+const visibleApiKeyId = ref(null)
 const accountParams = reactive({
   size: 10,
   num: 0,
@@ -685,6 +757,8 @@ function resetAddForm() {
   addForm.suffix = settingStore.domainList[0]
   addForm.type = null
   addForm.password = ''
+  addForm.createApiKey = false
+  addForm.apiKeyName = ''
 }
 
 function openAdd() {
@@ -741,7 +815,7 @@ function submit() {
   addLoading.value = true
   const form = {...addForm}
   form.email = form.email + form.suffix
-  userAdd(form).then(() => {
+  userAdd(form).then((data) => {
     addLoading.value = false
     showAdd.value = false
     ElMessage({
@@ -749,11 +823,101 @@ function submit() {
       type: "success",
       plain: true
     })
+    if (data?.apiKey?.key) {
+      showCreatedApiKey(data.apiKey, data.userId, form.email)
+    }
     resetAddForm()
     getUserList(false)
   }).finally(res => {
     addLoading.value = false
   })
+}
+
+function canManageApiKey(user) {
+  if (user?.isDel === 1) return false
+  return userStore.user.type === 0 || Number(user?.userId) === Number(userStore.user.userId)
+}
+
+async function openApiKeyList(user) {
+  apiKeyUser.value = user
+  apiKeyName.value = ''
+  newApiKey.value = ''
+  visibleApiKeyId.value = null
+  apiKeyShow.value = true
+  await loadUserApiKeys()
+}
+
+async function loadUserApiKeys() {
+  if (!apiKeyUser.value?.userId) return
+  apiKeyLoading.value = true
+  try {
+    apiKeys.value = await userApiKeyList(apiKeyUser.value.userId)
+  } finally {
+    apiKeyLoading.value = false
+  }
+}
+
+async function createUserApiKey() {
+  if (!apiKeyUser.value?.userId) return
+  apiKeyCreating.value = true
+  try {
+    const row = await userApiKeyCreate(apiKeyUser.value.userId, apiKeyName.value.trim())
+    newApiKey.value = row.key
+    visibleApiKeyId.value = row.apiKeyId
+    apiKeyName.value = ''
+    await loadUserApiKeys()
+    ElMessage({ message: t('addSuccessMsg'), type: 'success', plain: true })
+  } finally {
+    apiKeyCreating.value = false
+  }
+}
+
+function showCreatedApiKey(apiKey, userId, email) {
+  apiKeyUser.value = { userId, email }
+  apiKeys.value = [apiKey]
+  newApiKey.value = apiKey.key
+  visibleApiKeyId.value = apiKey.apiKeyId
+  apiKeyShow.value = true
+  loadUserApiKeys()
+}
+
+async function copyApiKey(key) {
+  await navigator.clipboard.writeText(key)
+  ElMessage({ message: t('copySuccessMsg'), type: 'success', plain: true })
+}
+
+function toggleApiKeyVisible(item) {
+  visibleApiKeyId.value = visibleApiKeyId.value === item.apiKeyId ? null : item.apiKeyId
+}
+
+function deleteUserApiKey(item) {
+  ElMessageBox.confirm(`确认删除 ${item.name} 吗？`, {
+    confirmButtonText: t('confirm'),
+    cancelButtonText: t('cancel'),
+    type: 'warning'
+  }).then(async () => {
+    await userApiKeyDelete(apiKeyUser.value.userId, item.apiKeyId)
+    if (visibleApiKeyId.value === item.apiKeyId) {
+      visibleApiKeyId.value = null
+    }
+    if (newApiKey.value && item.key === newApiKey.value) {
+      newApiKey.value = ''
+    }
+    await loadUserApiKeys()
+    ElMessage({ message: t('delSuccessMsg'), type: 'success', plain: true })
+  })
+}
+
+function formatApiKeyTime(value) {
+  return value ? tzDayjs(value).format('YYYY-MM-DD HH:mm') : '-'
+}
+
+function resetApiKeyDialog() {
+  apiKeys.value = []
+  apiKeyUser.value = null
+  apiKeyName.value = ''
+  newApiKey.value = ''
+  visibleApiKeyId.value = null
 }
 
 
@@ -1083,6 +1247,15 @@ function adjustWidth() {
   }
 }
 
+:deep(.api-key-dialog) {
+  width: 640px !important;
+  @media (max-width: 680px) {
+    width: calc(100% - 40px) !important;
+    margin-right: 20px !important;
+    margin-left: 20px !important;
+  }
+}
+
 .header-actions {
   padding: 9px 15px;
   display: flex;
@@ -1115,6 +1288,10 @@ function adjustWidth() {
   display: grid;
   grid-template-columns: 1fr;
   gap: 15px;
+}
+
+.api-key-option {
+  justify-self: start;
 }
 
 .type {
@@ -1157,6 +1334,95 @@ function adjustWidth() {
   display: flex;
   justify-content: end;
   width: 100%;
+}
+
+.api-key-dialog-body {
+  display: grid;
+  gap: 16px;
+}
+
+.api-key-create {
+  display: flex;
+  gap: 12px;
+
+  .el-button {
+    flex-shrink: 0;
+  }
+}
+
+.new-api-key {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+
+  code {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+.api-key-list {
+  display: grid;
+  gap: 12px;
+  min-height: 40px;
+}
+
+.api-key-empty {
+  color: var(--regular-text-color);
+}
+
+.api-key-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: var(--el-border-radius-base);
+
+  > div:first-child {
+    min-width: 0;
+    display: grid;
+    gap: 6px;
+  }
+
+  strong,
+  span,
+  em {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  span {
+    font-family: monospace;
+  }
+
+  em {
+    color: var(--regular-text-color);
+    font-style: normal;
+    font-size: 12px;
+  }
+}
+
+.api-key-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .api-key-create,
+  .api-key-item,
+  .new-api-key,
+  .api-key-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 .pagination {

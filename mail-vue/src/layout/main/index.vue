@@ -5,7 +5,7 @@
     <div
       v-if="accountShow"
       class="resize-handle resize-account"
-      @mousedown="startAccountResize"
+      @pointerdown="startAccountResize"
     ></div>
     <router-view class="main-view" v-slot="{ Component,route }">
       <keep-alive :include="['email','all-email','send','sys-setting','star','user','role','analysis','reg-key','draft']">
@@ -38,10 +38,12 @@ let startX = 0
 let startWidth = 0
 function startAccountResize(e) {
   e.preventDefault()
+  e.currentTarget?.setPointerCapture?.(e.pointerId)
   startX = e.clientX
   startWidth = uiStore.accountWidth
-  document.addEventListener('mousemove', onAccountResize)
-  document.addEventListener('mouseup', stopAccountResize)
+  document.addEventListener('pointermove', onAccountResize)
+  document.addEventListener('pointerup', stopAccountResize)
+  document.addEventListener('pointercancel', stopAccountResize)
   document.body.style.cursor = 'col-resize'
   document.body.style.userSelect = 'none'
 }
@@ -49,8 +51,9 @@ function onAccountResize(e) {
   uiStore.accountWidth = Math.max(180, Math.min(400, startWidth + (e.clientX - startX)))
 }
 function stopAccountResize() {
-  document.removeEventListener('mousemove', onAccountResize)
-  document.removeEventListener('mouseup', stopAccountResize)
+  document.removeEventListener('pointermove', onAccountResize)
+  document.removeEventListener('pointerup', stopAccountResize)
+  document.removeEventListener('pointercancel', stopAccountResize)
   document.body.style.cursor = ''
   document.body.style.userSelect = ''
 }
@@ -189,11 +192,15 @@ const handleResize = () => {
 .resize-handle {
   width: 4px;
   cursor: col-resize;
+  touch-action: none;
   background: transparent;
   transition: background 0.15s;
   z-index: 10;
   &:hover {
     background: var(--el-color-primary-light-5);
+  }
+  @media (pointer: coarse) {
+    width: 12px;
   }
 }
 

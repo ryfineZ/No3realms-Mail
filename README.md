@@ -1,25 +1,25 @@
 <p align="center">
     <img src="doc/demo/logo.png" width="80px" />
-    <h1 align="center">Cloud Mail</h1>
+    <h1 align="center">No3realms Mail</h1>
     <p align="center">基于 Cloudflare 的简约响应式邮箱服务，支持邮件发送、附件收发 🎉</p> 
     <p align="center">
         简体中文 | <a href="/README-en.md" style="margin-left: 5px">English </a>
     </p>
     <p align="center">
-        <a href="https://github.com/maillab/cloud-mail/tree/main?tab=MIT-1-ov-file" target="_blank" >
+        <a href="https://github.com/ryfineZ/No3realms-Mail/tree/main?tab=MIT-1-ov-file" target="_blank" >
             <img src="https://img.shields.io/badge/license-MIT-green" />
         </a>    
-        <a href="https://github.com/maillab/cloud-mail/releases" target="_blank" >
-            <img src="https://img.shields.io/github/v/release/maillab/cloud-mail" alt="releases" />
+        <a href="https://github.com/ryfineZ/No3realms-Mail/releases" target="_blank" >
+            <img src="https://img.shields.io/github/v/release/ryfineZ/No3realms-Mail" alt="releases" />
         </a>  
-        <a href="https://github.com/maillab/cloud-mail/issues" >
-            <img src="https://img.shields.io/github/issues/maillab/cloud-mail" alt="issues" />
+        <a href="https://github.com/ryfineZ/No3realms-Mail/issues" >
+            <img src="https://img.shields.io/github/issues/ryfineZ/No3realms-Mail" alt="issues" />
         </a>  
-        <a href="https://github.com/maillab/cloud-mail/stargazers" target="_blank">
-            <img src="https://img.shields.io/github/stars/maillab/cloud-mail" alt="stargazers" />
+        <a href="https://github.com/ryfineZ/No3realms-Mail/stargazers" target="_blank">
+            <img src="https://img.shields.io/github/stars/ryfineZ/No3realms-Mail" alt="stargazers" />
         </a>  
-        <a href="https://github.com/maillab/cloud-mail/forks" target="_blank" >
-            <img src="https://img.shields.io/github/forks/maillab/cloud-mail" alt="forks" />
+        <a href="https://github.com/ryfineZ/No3realms-Mail/forks" target="_blank" >
+            <img src="https://img.shields.io/github/forks/ryfineZ/No3realms-Mail" alt="forks" />
         </a>
     </p>
     <p align="center">
@@ -36,8 +36,8 @@
 
 ## 项目展示
 
-- [在线演示](https://skymail.ink)<br>
-- [部署文档](https://doc.skymail.ink)<br>
+- [在线演示](https://mail.3jiezhiwai.com)<br>
+- [API 文档](https://mail.3jiezhiwai.com/api-docs)<br>
 
 | ![](/doc/demo/demo1.png) | ![](/doc/demo/demo2.png) |
 |-----------------------|-----------------------|
@@ -58,7 +58,7 @@
 
 - **📦 附件收发**：支持收发附件，使用R2对象存储保存和下载文件
 
-- **🔔 邮件推送**：接收邮件后可以转发到TG机器人或其他服务商邮箱
+- **🔔 邮件推送**：接收邮件后可以转发到其他服务商邮箱
 
 - **📡 开放API**：支持使用API批量生成用户，多条件查询邮件 
 
@@ -95,7 +95,7 @@
 ## 目录结构
 
 ```
-cloud-mail
+No3realms-Mail
 ├── mail-worker				    # worker后端项目
 │   ├── src                  
 │   │   ├── api	 			    # api接口层			
@@ -139,18 +139,10 @@ cloud-mail
 
 ## 赞助
 
-<a href="https://doc.skymail.ink/support.html" >
-<img width="170px" src="./doc/images/support.png" alt="">
-</a>
+<img width="220px" src="./doc/images/support.png" alt="No3realms Mail support QR">
 
 ## 许可证
 
 本项目采用 [MIT](LICENSE) 许可证	
-
-
-## 交流
-
-[Telegram](https://t.me/cloud_mail_tg)
-
 
 

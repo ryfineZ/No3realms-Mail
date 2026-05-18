@@ -68,19 +68,19 @@
           </div>
           <div class="callout">
             <span>ℹ️</span>
-            <span>临时邮箱接口<strong>无需任何认证</strong>，可直接调用。其余接口需要登录后获取 token。</span>
+            <span>临时邮箱接口<strong>无需任何认证</strong>，可直接调用。其余接口支持登录 token 或 API Key。</span>
           </div>
         </section>
 
         <!-- Auth -->
         <section class="doc-section" id="auth">
           <h2 class="doc-h2">认证</h2>
-          <p class="doc-p">调用需认证的接口时，在 Header 中携带登录返回的 token：</p>
+          <p class="doc-p">调用需认证的接口时，在 Header 中携带登录返回的 token 或 API Key：</p>
           <div class="code-block">
             <div class="code-bar"><span class="code-lang">HTTP</span><button class="copy-btn" @click="copy('Authorization: your_token_here')">⧉ 复制</button></div>
             <pre>Authorization: your_token_here</pre>
           </div>
-          <p class="doc-p">通过 <code class="ic">POST /api/login</code> 获取 token，响应 <code class="ic">data.token</code> 即为 Bearer Token。</p>
+          <p class="doc-p">通过 <code class="ic">POST /api/login</code> 获取 token，响应 <code class="ic">data.token</code> 即为 Bearer Token；也可以在个人设置或用户管理中创建 API Key 后直接放入 <code class="ic">Authorization</code>。</p>
         </section>
 
         <!-- Response format -->
@@ -167,6 +167,13 @@
             <code class="ep-path">/api/account/list</code>
             <span class="auth-tag need">需要认证</span>
           </div>
+          <h3 class="doc-h3">Query 参数</h3>
+          <table class="tbl">
+            <thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td><code class="ic">email</code></td><td>string</td><td>×</td><td>按邮箱或标签关键字搜索</td></tr>
+            </tbody>
+          </table>
           <h3 class="doc-h3">响应</h3>
           <div class="code-block">
             <div class="code-bar"><span class="code-lang">JSON</span></div>
@@ -210,6 +217,69 @@
             <div class="code-bar"><span class="code-lang">JSON</span></div>
             <pre v-html="codes.accountRandom"></pre>
           </div>
+        </section>
+
+        <!-- API Key -->
+        <section class="doc-section" id="api-key-list">
+          <div class="badge blue">API Key</div>
+          <h2 class="doc-h2">API Key 列表</h2>
+          <p class="doc-p">获取当前登录用户的 API Key。超级管理员可传 <code class="ic">userId</code> 查看指定用户。</p>
+          <div class="endpoint-row">
+            <span class="method get">GET</span>
+            <code class="ep-path">/api/apiKey/list</code>
+            <span class="auth-tag need">需要认证</span>
+          </div>
+          <h3 class="doc-h3">Query 参数</h3>
+          <table class="tbl">
+            <thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td><code class="ic">userId</code></td><td>number</td><td>×</td><td>超级管理员专用，不传则查询当前用户</td></tr>
+            </tbody>
+          </table>
+          <h3 class="doc-h3">响应</h3>
+          <div class="code-block">
+            <div class="code-bar"><span class="code-lang">JSON</span></div>
+            <pre v-html="codes.apiKeyList"></pre>
+          </div>
+        </section>
+
+        <section class="doc-section" id="api-key-create">
+          <div class="badge blue">API Key</div>
+          <h2 class="doc-h2">创建 API Key</h2>
+          <p class="doc-p">为当前用户创建 API Key。超级管理员可传 <code class="ic">userId</code> 为指定用户创建。返回的 <code class="ic">key</code> 是完整密钥，请复制保存。</p>
+          <div class="endpoint-row">
+            <span class="method post">POST</span>
+            <code class="ep-path">/api/apiKey/create</code>
+            <span class="auth-tag need">需要认证</span>
+          </div>
+          <h3 class="doc-h3">请求体</h3>
+          <div class="code-block">
+            <div class="code-bar"><span class="code-lang">JSON</span></div>
+            <pre v-html="codes.apiKeyCreate"></pre>
+          </div>
+          <h3 class="doc-h3">响应</h3>
+          <div class="code-block">
+            <div class="code-bar"><span class="code-lang">JSON</span></div>
+            <pre v-html="codes.apiKeyCreateResponse"></pre>
+          </div>
+        </section>
+
+        <section class="doc-section" id="api-key-delete">
+          <div class="badge blue">API Key</div>
+          <h2 class="doc-h2">删除 API Key</h2>
+          <div class="endpoint-row">
+            <span class="method delete">DELETE</span>
+            <code class="ep-path">/api/apiKey/delete</code>
+            <span class="auth-tag need">需要认证</span>
+          </div>
+          <h3 class="doc-h3">Query 参数</h3>
+          <table class="tbl">
+            <thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td><code class="ic">apiKeyId</code></td><td>number</td><td>✓</td><td>要删除的 API Key ID</td></tr>
+              <tr><td><code class="ic">userId</code></td><td>number</td><td>×</td><td>超级管理员专用，不传则删除当前用户的 API Key</td></tr>
+            </tbody>
+          </table>
         </section>
 
         <!-- Email list -->
@@ -352,7 +422,7 @@ import router from '@/router/index.js';
 import http from '@/axios/index.js';
 
 const settingStore = useSettingStore();
-const siteTitle = computed(() => settingStore.settings.title || 'Cloud Mail');
+const siteTitle = computed(() => settingStore.settings.title || 'No3realms Mail');
 const origin = computed(() => window.location.origin);
 const publicDomains = ref([]);
 const firstDomain = computed(() => publicDomains.value[0]?.domain || 'example.com');
@@ -440,7 +510,8 @@ const codes = computed(() => {
     {
       ${k('accountId')}: ${n('1')},
       ${k('email')}: ${g(`you@${d}`)},
-      ${k('accountName')}: ${g('My Mailbox')},
+      ${k('name')}: ${g('you')},
+      ${k('tags')}: [${g('注册')}, ${g('测试项目')}],
       ${k('createTime')}: ${g('2025-01-01T00:00:00')}
     }
   ]
@@ -449,7 +520,8 @@ const codes = computed(() => {
     accountAdd:
 `{
   ${k('email')}: ${g(`mynewbox@${d}`)},
-  ${k('accountName')}: ${g('My New Box')}  ${c('// 可选')}
+  ${k('token')}: ${g('TURNSTILE_TOKEN')},  ${c('// 按站点设置决定是否必填')}
+  ${k('tags')}: [${g('注册')}, ${g('测试项目')}]  ${c('// 可选')}
 }`,
 
     accountRandom:
@@ -460,6 +532,40 @@ const codes = computed(() => {
     ${k('prefix')}: ${g('random8ab')},
     ${k('domain')}: ${g(`sub.${d}`)},
     ${k('domainId')}: ${n('1')}
+  }
+}`,
+
+    apiKeyList:
+`{
+  ${k('code')}: ${n('200')},
+  ${k('data')}: [
+    {
+      ${k('apiKeyId')}: ${n('1')},
+      ${k('name')}: ${g('后台脚本')},
+      ${k('key')}: ${g('cm_xxxxx')},        ${c('// 新版密钥可查看完整值')}
+      ${k('keyPreview')}: ${g('cm_xxxx...abcd')},
+      ${k('createTime')}: ${g('2025-01-01T00:00:00')},
+      ${k('lastUsedTime')}: ${g('2025-01-02T00:00:00')}
+    }
+  ]
+}`,
+
+    apiKeyCreate:
+`{
+  ${k('name')}: ${g('后台脚本')},  ${c('// 可选')}
+  ${k('userId')}: ${n('12')}          ${c('// 可选，仅超级管理员可用')}
+}`,
+
+    apiKeyCreateResponse:
+`{
+  ${k('code')}: ${n('200')},
+  ${k('data')}: {
+    ${k('apiKeyId')}: ${n('1')},
+    ${k('name')}: ${g('后台脚本')},
+    ${k('key')}: ${g('cm_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')},
+    ${k('keyPreview')}: ${g('cm_xxxx...abcd')},
+    ${k('createTime')}: ${g('2025-01-01T00:00:00')},
+    ${k('lastUsedTime')}: null
   }
 }`,
 
@@ -515,6 +621,9 @@ const sidebar = {
     { id: 'account-list', title: '邮箱列表' },
     { id: 'account-add', title: '添加邮箱' },
     { id: 'account-random', title: '随机生成' },
+    { id: 'api-key-list', title: 'API Key 列表' },
+    { id: 'api-key-create', title: '创建 API Key' },
+    { id: 'api-key-delete', title: '删除 API Key' },
   ],
   email: [
     { id: 'email-list', title: '邮件列表' },

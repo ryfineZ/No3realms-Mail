@@ -3,6 +3,7 @@ import userService from '../service/user-service';
 import result from '../model/result';
 import userContext from '../security/user-context';
 import accountService from '../service/account-service';
+import apiKeyService, { assertApiKeyAdmin } from '../service/api-key-service';
 
 app.delete('/user/delete', async (c) => {
 	await userService.physicsDelete(c, c.req.query());
@@ -30,8 +31,21 @@ app.get('/user/list', async (c) => {
 });
 
 app.post('/user/add', async (c) => {
-	await userService.add(c, await c.req.json());
-	return c.json(result.ok());
+	const params = await c.req.json();
+	const currentUser = userContext.getUser(c);
+	const createApiKey = params.createApiKey === true || params.createApiKey === 'true';
+	if (createApiKey) {
+		assertApiKeyAdmin(c, currentUser);
+	}
+	const userId = await userService.add(c, params);
+	let apiKey = null;
+	if (createApiKey) {
+		apiKey = await apiKeyService.createForTarget(c, {
+			name: params.apiKeyName,
+			userId
+		}, currentUser);
+	}
+	return c.json(result.ok({ userId, apiKey }));
 });
 
 app.put('/user/resetSendCount', async (c) => {
@@ -53,5 +67,3 @@ app.delete('/user/deleteAccount', async (c) => {
 	await accountService.physicsDelete(c, c.req.query());
 	return c.json(result.ok());
 });
-
-

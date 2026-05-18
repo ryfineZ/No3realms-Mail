@@ -34,6 +34,7 @@ const dbInit = {
 		await this.v3_3DB(c);
 		await this.v3_4DB(c);
 		await this.v3_5DB(c);
+		await this.v3_6DB(c);
 		await settingService.refresh(c);
 		return c.text('success');
 	},
@@ -122,6 +123,14 @@ const dbInit = {
 		}
 		try {
 			await c.env.db.prepare(`ALTER TABLE api_key ADD COLUMN key TEXT;`).run();
+		} catch (e) {
+			console.warn(e.message);
+		}
+	},
+
+	async v3_6DB(c) {
+		try {
+			await c.env.db.prepare(`ALTER TABLE account ADD COLUMN tags TEXT NOT NULL DEFAULT '[]';`).run();
 		} catch (e) {
 			console.warn(e.message);
 		}
@@ -271,7 +280,7 @@ const dbInit = {
 				type INTEGER NOT NULL DEFAULT 0,
 				update_time DATETIME DEFAULT CURRENT_TIMESTAMP
       )`,
-			`ALTER TABLE setting ADD COLUMN notice_title TEXT NOT NULL DEFAULT 'Cloud Mail';`,
+			`ALTER TABLE setting ADD COLUMN notice_title TEXT NOT NULL DEFAULT 'No3realms Mail';`,
 			`ALTER TABLE setting ADD COLUMN notice_content TEXT NOT NULL DEFAULT '';`,
 			`ALTER TABLE setting ADD COLUMN notice_type TEXT NOT NULL DEFAULT 'none';`,
 			`ALTER TABLE setting ADD COLUMN notice_duration INTEGER NOT NULL DEFAULT 0;`,
@@ -652,10 +661,14 @@ const dbInit = {
 		  CREATE TABLE IF NOT EXISTS account (
 			account_id INTEGER PRIMARY KEY AUTOINCREMENT,
 			email TEXT NOT NULL,
+			name TEXT NOT NULL DEFAULT '',
 			status INTEGER DEFAULT 0 NOT NULL,
 			latest_email_time DATETIME,
 			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
 			user_id INTEGER NOT NULL,
+			all_receive INTEGER DEFAULT 0 NOT NULL,
+			sort INTEGER DEFAULT 0 NOT NULL,
+			tags TEXT NOT NULL DEFAULT '[]',
 			is_del INTEGER DEFAULT 0 NOT NULL
 		  )
 		`).run();
@@ -678,7 +691,7 @@ const dbInit = {
 			  INSERT INTO setting (
 				register, receive, add_email, many_email, title, auto_refresh, register_verify, add_email_verify
 			  )
-			  SELECT 0, 0, 0, 0, 'Cloud Mail', 0, 1, 1
+			  SELECT 0, 0, 0, 0, 'No3realms Mail', 0, 1, 1
 			  WHERE NOT EXISTS (SELECT 1 FROM setting)
 			`).run();
 		} catch (e) {

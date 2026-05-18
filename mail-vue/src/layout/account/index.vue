@@ -13,7 +13,7 @@
 
     <div class="account-search" v-if="isAdmin">
       <Icon icon="mingcute:search-line" width="15" height="15" color="var(--el-text-color-secondary)"/>
-      <input v-model="accountSearch" placeholder="搜索邮箱" autocomplete="off" />
+      <input v-model="accountSearch" placeholder="搜索邮箱或标签" autocomplete="off" />
       <button v-if="accountSearch" @click="accountSearch = ''" title="清空">
         <Icon icon="mingcute:close-line" width="14" height="14"/>
       </button>
@@ -33,6 +33,12 @@
               <div class="account-item__email">{{ item.email }}</div>
             </el-tooltip>
             <div class="account-item__name" v-if="item.name && item.name !== item.email.split('@')[0]">{{ item.name }}</div>
+            <div class="account-item__meta" v-if="isAdmin && (item.createTime || accountTags(item).length > 0)">
+              <span class="account-item__time" v-if="item.createTime">创建于 {{ formatAccountCreateTime(item.createTime) }}</span>
+              <div class="account-item__tags" v-if="accountTags(item).length > 0">
+                <span class="account-tag" v-for="tag in accountTags(item)" :key="tag">{{ tag }}</span>
+              </div>
+            </div>
           </div>
           <div class="account-item__actions" @click.stop>
             <button class="action-btn" @click="copyAccount(item.email)" :title="$t('copy')">
@@ -183,6 +189,21 @@
           <span>{{ emailPreview }}</span>
         </div>
 
+        <!-- 标签 -->
+        <div class="form-section">
+          <label class="form-label">标签</label>
+          <input
+            v-model="addForm.tags"
+            class="form-input"
+            placeholder="如：注册、测试项目，用逗号分隔"
+            autocomplete="off"
+            @keydown.enter.prevent="submit"
+          />
+          <div class="tag-hint" v-if="createTags.length > 0">
+            <span class="account-tag" v-for="tag in createTags" :key="tag">{{ tag }}</span>
+          </div>
+        </div>
+
         <!-- Turnstile 验证 -->
         <div class="add-email-turnstile" :class="verifyShow ? 'turnstile-show' : 'turnstile-hide'"
              :data-sitekey="settingStore.settings.siteKey"
@@ -239,6 +260,7 @@ import { domainAvailableList, accountRandom } from "@/request/domain.js";
 import { shareEmail } from "@/request/share.js";
 import { sleep } from "@/utils/time-utils.js";
 import { isEmail } from "@/utils/verify-utils.js";
+import { tzDayjs } from "@/utils/day.js";
 import { useSettingStore } from "@/store/setting.js";
 import { useAccountStore } from "@/store/account.js";
 import { useEmailStore } from "@/store/email.js";
@@ -287,7 +309,7 @@ const subdomainLevels = ref([2]);
 const randomLoading = ref(false);
 
 // --- 表单 ---
-const addForm = reactive({ prefix: '' });
+const addForm = reactive({ prefix: '', tags: '' });
 
 // --- 重命名 ---
 const setNameShow = ref(false);
@@ -311,6 +333,8 @@ const emailPreview = computed(() => {
   }
   return `${prefix}@${domain}`;
 });
+
+const createTags = computed(() => parseTagInput(addForm.tags));
 
 // 初始化
 if (hasPerm('account:query')) {
@@ -427,6 +451,7 @@ async function generateRandom() {
 function add() {
   showAdd.value = true;
   addForm.prefix = '';
+  addForm.tags = '';
   selectedDomain.value = null;
   subdomainInput.value = '';
   useSubdomain.value = false;
@@ -466,7 +491,7 @@ async function submit() {
   // 启用二级域名但未指定子域名，调用 random 接口获取
   if (useSubdomain.value && !subdomainInput.value.trim() && !domain) {
     try {
-      const res = await accountRandom(selectedDomain.value?.domainId);
+      const res = await accountRandom({ domainId: selectedDomain.value?.domainId });
       const [p, d] = res.email.split('@');
       if (!prefix) prefix = p;
       domain = d;
@@ -508,11 +533,12 @@ async function submit() {
   }
 
   addLoading.value = true;
-  accountAdd(email, verifyToken).then(account => {
+  accountAdd(email, verifyToken, createTags.value).then(account => {
     addLoading.value = false;
     showAdd.value = false;
     addForm.prefix = '';
-    accounts.push(account);
+    addForm.tags = '';
+    refresh();
     verifyToken = '';
     settingStore.settings.addVerifyOpen = account.addVerifyOpen;
     ElMessage({ message: t('addSuccessMsg'), type: 'success', plain: true });
@@ -568,6 +594,33 @@ function refresh() {
   scrollbarRef.value.setScrollTop?.(0);
   accounts.splice(0, accounts.length);
   getAccountList();
+}
+
+function parseTagInput(value) {
+  if (Array.isArray(value)) {
+    return [...new Set(value.map(tag => String(tag || '').trim()).filter(Boolean))].slice(0, 20);
+  }
+
+  if (typeof value === 'string' && value.trim().startsWith('[')) {
+    try {
+      return parseTagInput(JSON.parse(value));
+    } catch {}
+  }
+
+  return [...new Set(String(value || '')
+    .split(/[,，\n]/)
+    .map(tag => tag.trim())
+    .filter(Boolean))]
+    .slice(0, 20);
+}
+
+function accountTags(item) {
+  return parseTagInput(item.tags);
+}
+
+function formatAccountCreateTime(time) {
+  if (!time) return '';
+  return tzDayjs(time).format('YYYY-MM-DD HH:mm');
 }
 
 function changeAccount(account) {
@@ -846,6 +899,40 @@ path[fill="#ffdda1"] { fill: #ffdd7d; }
   text-overflow: ellipsis;
 }
 
+.account-item__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.account-item__time {
+  font-size: 11px;
+  color: var(--el-text-color-placeholder);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.account-item__tags,
+.tag-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.account-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .account-item__actions {
   display: flex;
   align-items: center;
@@ -1087,6 +1174,10 @@ path[fill="#ffdda1"] { fill: #ffdd7d; }
 .domain-hint {
   font-size: 12px;
   color: var(--el-text-color-placeholder);
+}
+
+.tag-hint {
+  min-height: 18px;
 }
 
 /* ===== 子域名输入 ===== */

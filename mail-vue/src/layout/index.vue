@@ -16,7 +16,7 @@
     <div
       v-if="uiStore.asideShow && !uiStore.asideCollapsed && !isMobile"
       class="resize-handle resize-aside"
-      @mousedown="startResize('aside', $event)"
+      @pointerdown="startResize('aside', $event)"
     ></div>
 
     <div
@@ -60,11 +60,13 @@ let startWidth = 0
 
 function startResize(target, e) {
   e.preventDefault()
+  e.currentTarget?.setPointerCapture?.(e.pointerId)
   resizeTarget = target
   startX = e.clientX
   startWidth = target === 'aside' ? uiStore.asideWidth : uiStore.accountWidth
-  document.addEventListener('mousemove', onResize)
-  document.addEventListener('mouseup', stopResize)
+  document.addEventListener('pointermove', onResize)
+  document.addEventListener('pointerup', stopResize)
+  document.addEventListener('pointercancel', stopResize)
   document.body.style.cursor = 'col-resize'
   document.body.style.userSelect = 'none'
 }
@@ -81,8 +83,9 @@ function onResize(e) {
 
 function stopResize() {
   resizeTarget = null
-  document.removeEventListener('mousemove', onResize)
-  document.removeEventListener('mouseup', stopResize)
+  document.removeEventListener('pointermove', onResize)
+  document.removeEventListener('pointerup', stopResize)
+  document.removeEventListener('pointercancel', stopResize)
   document.body.style.cursor = ''
   document.body.style.userSelect = ''
 }
@@ -180,12 +183,16 @@ onBeforeUnmount(() => {
 .resize-handle {
   width: 4px;
   cursor: col-resize;
+  touch-action: none;
   background: transparent;
   flex-shrink: 0;
   z-index: 50;
   transition: background 0.15s;
   &:hover {
     background: var(--el-color-primary-light-5);
+  }
+  @media (pointer: coarse) {
+    width: 12px;
   }
 }
 </style>

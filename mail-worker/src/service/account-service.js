@@ -13,6 +13,21 @@ import roleService from './role-service';
 import domainService from './domain-service';
 import { t } from '../i18n/i18n';
 import verifyRecordService from './verify-record-service';
+import { normalizeTags, tagsToArray, tagsToString } from '../utils/tag-utils';
+
+export function assertAccountDeleteAllowed(c, currentUser, accountRow) {
+	if (!accountRow) {
+		throw new BizError(t('noUserAccount'));
+	}
+
+	if (accountRow.email === currentUser.email) {
+		throw new BizError(t('delMyAccount'));
+	}
+
+	if (accountRow.userId !== currentUser.userId && currentUser.email !== c.env.admin) {
+		throw new BizError(t('noUserAccount'));
+	}
+}
 
 const accountService = {
 
@@ -20,7 +35,7 @@ const accountService = {
 
 		const { addEmailVerify , addEmail, manyEmail, addVerifyCount, minEmailPrefix, emailPrefixFilter } = await settingService.query(c);
 
-		let { email, token } = params;
+		let { email, token, tags } = params;
 
 
 		if (!(addEmail === settingConst.addEmail.OPEN && manyEmail === settingConst.manyEmail.OPEN)) {
@@ -91,7 +106,13 @@ const accountService = {
 		}
 
 
-		accountRow = await orm(c).insert(account).values({ email: email, userId: userId, name: emailUtils.getName(email) }).returning().get();
+		const normalizedTags = normalizeTags(tags);
+		accountRow = await orm(c).insert(account).values({
+			email: email,
+			userId: userId,
+			name: emailUtils.getName(email),
+			tags: tagsToString(normalizedTags)
+		}).returning().get();
 
 		if (addEmailVerify === settingConst.addEmailVerify.COUNT && !addVerifyOpen) {
 			const row = await verifyRecordService.increaseAddCount(c);
@@ -99,6 +120,7 @@ const accountService = {
 		}
 
 		accountRow.addVerifyOpen = addVerifyOpen
+		accountRow.tags = normalizedTags
 		return accountRow;
 	},
 
@@ -106,7 +128,7 @@ const accountService = {
 		return orm(c).select().from(account).where(sql`${account.email} COLLATE NOCASE = ${email}`).get();
 	},
 
-	list(c, params, userId, isAdmin = false) {
+	async list(c, params, userId, isAdmin = false) {
 
 		let { accountId, size, lastSort, lastEmailTime, email } = params;
 
@@ -137,7 +159,10 @@ const accountService = {
 		}
 
 		if (email) {
-			conditions.push(sql`${account.email} COLLATE NOCASE LIKE ${'%' + email + '%'}`);
+			conditions.push(or(
+				sql`${account.email} COLLATE NOCASE LIKE ${'%' + email + '%'}`,
+				sql`${account.tags} LIKE ${'%' + email + '%'}`
+			));
 		} else {
 			conditions.push(or(
 				lt(sql`COALESCE(${account.latestEmailTime}, ${account.createTime})`, lastEmailTime),
@@ -148,29 +173,25 @@ const accountService = {
 			));
 		}
 
-		return orm(c).select().from(account).where(and(...conditions))
+		const rows = await orm(c).select().from(account).where(and(...conditions))
 			.orderBy(desc(sql`COALESCE(${account.latestEmailTime}, ${account.createTime})`), asc(account.accountId))
 			.limit(size)
 			.all();
+		return rows.map(row => ({ ...row, tags: tagsToArray(row.tags) }));
 	},
-	async delete(c, params, userId) {
+	async delete(c, params, currentUser) {
 
 		let { accountId } = params;
 
-		const user = await userService.selectById(c, userId);
 		const accountRow = await this.selectById(c, accountId);
+		assertAccountDeleteAllowed(c, currentUser, accountRow);
 
-		if (accountRow.email === user.email) {
-			throw new BizError(t('delMyAccount'));
+		const conditions = [eq(account.accountId, accountId)];
+		if (currentUser.email !== c.env.admin) {
+			conditions.push(eq(account.userId, currentUser.userId));
 		}
-
-		if (accountRow.userId !== user.userId) {
-			throw new BizError(t('noUserAccount'));
-		}
-
 		await orm(c).update(account).set({ isDel: isDel.DELETE }).where(
-			and(eq(account.userId, userId),
-				eq(account.accountId, accountId)))
+			and(...conditions))
 			.run();
 	},
 

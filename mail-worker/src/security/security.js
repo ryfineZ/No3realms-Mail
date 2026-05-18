@@ -17,7 +17,6 @@ const exclude = [
 	'/webhooks',
 	'/init',
 	'/public/genToken',
-	'/telegram',
 	'/test',
 	'/oauth',
 	'/domain/public', // 公开域名列表，无需认证

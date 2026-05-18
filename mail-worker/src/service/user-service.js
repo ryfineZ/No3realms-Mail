@@ -335,7 +335,7 @@ const userService = {
 			throw new BizError(t('isRegAccount'));
 		}
 
-		const role = roleService.selectById(c, type);
+		const role = await roleService.selectById(c, type);
 
 		if (!role) {
 			throw new BizError(t('roleNotExist'));
@@ -348,6 +348,7 @@ const userService = {
 		await userService.updateUserInfo(c, userId, true);
 
 		await accountService.insert(c, { userId: userId, email, type, name: emailUtils.getName(email) });
+		return userId;
 	},
 
 	async resetDaySendCount(c) {
