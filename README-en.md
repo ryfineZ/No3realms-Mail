@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="doc/demo/logo.png" width="80px" />
+    <img src="doc/demo/logo.png" width="180px" />
     <h1 align="center">No3realms-Mail</h1>
     <p align="center">A simple, responsive email service designed to run on Cloudflare Workers 🎉</p> 
     <p align="center">
