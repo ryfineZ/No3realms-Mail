@@ -1,6 +1,6 @@
 <p align="center">
     <img src="doc/demo/logo.png" width="80px" />
-    <h1 align="center">No3realms Mail</h1>
+    <h1 align="center">No3realms-Mail</h1>
     <p align="center">基于 Cloudflare 的简约响应式邮箱服务，支持邮件发送、附件收发 🎉</p> 
     <p align="center">
         简体中文 | <a href="/README-en.md" style="margin-left: 5px">English </a>
@@ -139,10 +139,9 @@ No3realms-Mail
 
 ## 赞助
 
-<img width="220px" src="./doc/images/support.png" alt="No3realms Mail support QR">
+<img width="220px" src="./doc/images/support.png" alt="No3realms-Mail support QR">
 
 ## 许可证
 
 本项目采用 [MIT](LICENSE) 许可证	
-
 

@@ -1,6 +1,6 @@
-# No3realms Mail API 文档
+# No3realms-Mail API 文档
 
-本文档面向 No3realms Mail 接口调用方，说明第三方或前端可直接调用的主要接口。
+本文档面向 No3realms-Mail 接口调用方，说明第三方或前端可直接调用的主要接口。
 
 ## 1. 基础信息
 
@@ -320,7 +320,7 @@ Authorization: <login_token>
 
 说明：
 
-- 只删除 No3realms Mail 数据库中的域名记录。
+- 只删除 No3realms-Mail 数据库中的域名记录。
 - 不会删除 Cloudflare 上的 DNS 记录。
 
 ---

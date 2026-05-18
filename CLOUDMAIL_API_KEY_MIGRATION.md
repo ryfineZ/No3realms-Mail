@@ -1,6 +1,6 @@
-# No3realms Mail API Key 调用改造说明
+# No3realms-Mail API Key 调用改造说明
 
-本文档面向 No3realms Mail 接口调用方，说明如何从“登录 token 调用”改为“API Key 调用”。
+本文档面向 No3realms-Mail 接口调用方，说明如何从“登录 token 调用”改为“API Key 调用”。
 
 ## 1. 为什么需要改造
 
@@ -10,7 +10,7 @@
 2. 拿到登录 token。
 3. 后续接口使用这个登录 token 调用。
 
-这种方式可以继续使用，但不适合第三方项目高频调用。原因是 No3realms Mail 会限制同一用户的网页登录 token 数量。第三方项目如果频繁登录，会不断生成新 token，可能把网页登录状态挤掉，导致网页端需要重新登录。
+这种方式可以继续使用，但不适合第三方项目高频调用。原因是 No3realms-Mail 会限制同一用户的网页登录 token 数量。第三方项目如果频繁登录，会不断生成新 token，可能把网页登录状态挤掉，导致网页端需要重新登录。
 
 新的推荐方式是：第三方项目使用 **API Key** 调用接口。
 
@@ -19,14 +19,14 @@ API Key 的特点：
 - 不占用网页登录 token。
 - 不影响网页端登录状态。
 - 不需要每次先调用 `/api/login`。
-- 权限与创建它的 No3realms Mail 用户一致。
+- 权限与创建它的 No3realms-Mail 用户一致。
 - 完整密钥只在创建时显示一次，请创建后立即保存。
 
 ---
 
 ## 2. 如何获取 API Key
 
-由 No3realms Mail 管理员或对应账号登录 No3realms Mail 网页端：
+由 No3realms-Mail 管理员或对应账号登录 No3realms-Mail 网页端：
 
 ```txt
 个人设置 → API Key → 创建 API Key
@@ -167,7 +167,7 @@ async function cloudMailRequest(path, options = {}) {
   const data = await res.json();
 
   if (data.code !== 200) {
-    throw new Error(data.message || 'No3realms Mail API 请求失败');
+    throw new Error(data.message || 'No3realms-Mail API 请求失败');
   }
 
   return data.data;
@@ -274,7 +274,7 @@ const share = await cloudMailRequest('/share/email', {
 
 ## 7. 权限说明
 
-API Key 的权限与创建它的 No3realms Mail 用户一致。
+API Key 的权限与创建它的 No3realms-Mail 用户一致。
 
 例如：
 
@@ -338,4 +338,4 @@ API Key 的权限与创建它的 No3realms Mail 用户一致。
 
 ### API Key 泄露了怎么办？
 
-立即在 No3realms Mail 个人设置里删除该 API Key，然后创建新的 API Key，并更新调用方环境变量。
+立即在 No3realms-Mail 个人设置里删除该 API Key，然后创建新的 API Key，并更新调用方环境变量。

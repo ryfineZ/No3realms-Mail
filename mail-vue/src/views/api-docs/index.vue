@@ -422,7 +422,7 @@ import router from '@/router/index.js';
 import http from '@/axios/index.js';
 
 const settingStore = useSettingStore();
-const siteTitle = computed(() => settingStore.settings.title || 'No3realms Mail');
+const siteTitle = computed(() => settingStore.settings.title || 'No3realms-Mail');
 const origin = computed(() => window.location.origin);
 const publicDomains = ref([]);
 const firstDomain = computed(() => publicDomains.value[0]?.domain || 'example.com');

@@ -1,6 +1,6 @@
 <p align="center">
     <img src="doc/demo/logo.png" width="80px" />
-    <h1 align="center">No3realms Mail</h1>
+    <h1 align="center">No3realms-Mail</h1>
     <p align="center">A simple, responsive email service designed to run on Cloudflare Workers 🎉</p> 
     <p align="center">
        <a href="/README.md" style="margin-left: 5px">简体中文</a> | English 
@@ -133,7 +133,7 @@ No3realms-Mail
 
 ## Support
 
-<img width="220px" src="./doc/images/support.png" alt="No3realms Mail support QR">
+<img width="220px" src="./doc/images/support.png" alt="No3realms-Mail support QR">
 
 ## License
 
