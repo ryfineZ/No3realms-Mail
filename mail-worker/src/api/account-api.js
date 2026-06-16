@@ -25,6 +25,11 @@ app.put('/account/setName', async (c) => {
 	return c.json(result.ok());
 });
 
+app.put('/account/setTags', async (c) => {
+	await accountService.setTags(c, await c.req.json(), userContext.getUser(c));
+	return c.json(result.ok());
+});
+
 app.put('/account/setAllReceive', async (c) => {
 	await accountService.setAllReceive(c, await c.req.json(), userContext.getUserId(c));
 	return c.json(result.ok());

@@ -57,6 +57,9 @@
                   <el-dropdown-item v-if="hasPerm('email:send')" @click="openSetName(item)">
                     <Icon icon="mingcute:edit-line" width="14" height="14" style="margin-right:6px"/>{{ $t('rename') }}
                   </el-dropdown-item>
+                  <el-dropdown-item @click="openSetTags(item)">
+                    <Icon icon="mingcute:tag-line" width="14" height="14" style="margin-right:6px"/>标签
+                  </el-dropdown-item>
                   <el-dropdown-item v-if="isAdmin" @click="shareInbox(item)">
                     <Icon icon="mingcute:share-forward-line" width="14" height="14" style="margin-right:6px"/>分享收件箱
                   </el-dropdown-item>
@@ -234,6 +237,26 @@
     </el-dialog>
     </Teleport>
 
+    <!-- 标签弹窗 -->
+    <Teleport to="body">
+    <el-dialog v-model="tagsDialogShow" title="标签" width="380px" align-center>
+      <div class="simple-form">
+        <div class="share-email" v-if="taggingAccount">{{ taggingAccount.email }}</div>
+        <el-input
+          v-model="tagInput"
+          type="textarea"
+          :autosize="{ minRows: 2, maxRows: 4 }"
+          placeholder="如：注册、测试项目，用逗号或换行分隔"
+          autocomplete="off"
+        />
+        <div class="tag-hint" v-if="editTags.length > 0">
+          <span class="account-tag" v-for="tag in editTags" :key="tag">{{ tag }}</span>
+        </div>
+        <el-button class="simple-btn" type="primary" @click="saveTags" :loading="tagsLoading">保存</el-button>
+      </div>
+    </el-dialog>
+    </Teleport>
+
     <!-- 分享收件箱弹窗 -->
     <Teleport to="body">
     <el-dialog v-model="shareDialogShow" title="分享收件箱" width="380px" align-center>
@@ -254,7 +277,7 @@ import { Icon } from "@iconify/vue";
 import { nextTick, reactive, ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import {
   accountList, accountAdd, accountDelete, accountSetName,
-  accountSetAllReceive, accountSetAsTop
+  accountSetAllReceive, accountSetAsTop, accountSetTags
 } from "@/request/account.js";
 import { domainAvailableList, accountRandom } from "@/request/domain.js";
 import { shareEmail } from "@/request/share.js";
@@ -317,6 +340,12 @@ const setNameLoading = ref(false);
 const accountName = ref(null);
 let renamingAccount = null;
 
+// --- 标签 ---
+const tagsDialogShow = ref(false);
+const tagsLoading = ref(false);
+const tagInput = ref('');
+const taggingAccount = ref(null);
+
 // --- 分享收件箱 ---
 const shareDialogShow = ref(false);
 const shareLoading = ref(false);
@@ -335,6 +364,7 @@ const emailPreview = computed(() => {
 });
 
 const createTags = computed(() => parseTagInput(addForm.tags));
+const editTags = computed(() => parseTagInput(tagInput.value));
 
 // 初始化
 if (hasPerm('account:query')) {
@@ -629,9 +659,7 @@ function changeAccount(account) {
 }
 
 function showNullSetting(item) {
-  return !isAdmin.value &&
-    !hasPerm('email:send') &&
-    !(item.accountId !== userStore.user.account.accountId && hasPerm('account:delete'));
+  return false;
 }
 
 function remove(account) {
@@ -688,6 +716,29 @@ function setName() {
     if (renamingAccount.accountId === userStore.user.account.accountId) userStore.user.name = name;
     ElMessage({ message: t('saveSuccessMsg'), type: 'success', plain: true });
   }).finally(() => { setNameLoading.value = false; });
+}
+
+function openSetTags(accountItem) {
+  taggingAccount.value = accountItem;
+  tagInput.value = accountTags(accountItem).join('，');
+  tagsDialogShow.value = true;
+}
+
+async function saveTags() {
+  if (!taggingAccount.value) return;
+  const tags = editTags.value;
+  tagsLoading.value = true;
+  try {
+    await accountSetTags(taggingAccount.value.accountId, tags);
+    taggingAccount.value.tags = tags;
+    if (accountStore.currentAccountId === taggingAccount.value.accountId && accountStore.currentAccount) {
+      accountStore.currentAccount.tags = tags;
+    }
+    tagsDialogShow.value = false;
+    ElMessage({ message: t('saveSuccessMsg'), type: 'success', plain: true });
+  } finally {
+    tagsLoading.value = false;
+  }
 }
 
 function setAsTop(account, index) {

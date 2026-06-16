@@ -29,6 +29,16 @@ export function assertAccountDeleteAllowed(c, currentUser, accountRow) {
 	}
 }
 
+export function assertAccountManageAllowed(c, currentUser, accountRow) {
+	if (!accountRow) {
+		throw new BizError(t('noUserAccount'));
+	}
+
+	if (accountRow.userId !== currentUser.userId && currentUser.email !== c.env.admin) {
+		throw new BizError(t('noUserAccount'));
+	}
+}
+
 const accountService = {
 
 	async add(c, params, userId) {
@@ -256,6 +266,13 @@ const accountService = {
 			throw new BizError(t('usernameLengthLimit'));
 		}
 		await orm(c).update(account).set({name}).where(and(eq(account.userId, userId),eq(account.accountId, accountId))).run();
+	},
+
+	async setTags(c, params, currentUser) {
+		const { accountId, tags } = params;
+		const accountRow = await this.selectById(c, accountId);
+		assertAccountManageAllowed(c, currentUser, accountRow);
+		await orm(c).update(account).set({ tags: tagsToString(tags) }).where(eq(account.accountId, accountId)).run();
 	},
 
 	async allAccount(c, params) {
