@@ -19,4 +19,16 @@ describe('No3realms-Mail worker', () => {
 		expect(response.status).toBe(200);
 		expect(await response.text()).toContain('<div id="app"></div>');
 	});
+
+	it('serves share page metadata without old product name', async () => {
+		const response = await SELF.fetch('http://example.com/share/test-share?email=test%40example.com', {
+			headers: { Accept: 'text/html' },
+		});
+		const html = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(html).toContain('<title>test@example.com 的只读邮箱分享</title>');
+		expect(html).toContain('<meta property="og:title" content="test@example.com 的只读邮箱分享">');
+		expect(html).not.toContain('Cloud Mail');
+	});
 });
