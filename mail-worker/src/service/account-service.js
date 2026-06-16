@@ -39,6 +39,10 @@ export function assertAccountManageAllowed(c, currentUser, accountRow) {
 	}
 }
 
+export function collectAccountTags(rows) {
+	return normalizeTags((rows || []).flatMap(row => tagsToArray(row.tags)));
+}
+
 const accountService = {
 
 	async add(c, params, userId) {
@@ -189,6 +193,17 @@ const accountService = {
 			.all();
 		return rows.map(row => ({ ...row, tags: tagsToArray(row.tags) }));
 	},
+
+	async listTags(c, userId, isAdmin = false) {
+		const conditions = [eq(account.isDel, isDel.NORMAL)];
+		if (!isAdmin) {
+			conditions.push(eq(account.userId, userId));
+		}
+
+		const rows = await orm(c).select({ tags: account.tags }).from(account).where(and(...conditions)).all();
+		return collectAccountTags(rows);
+	},
+
 	async delete(c, params, currentUser) {
 
 		let { accountId } = params;

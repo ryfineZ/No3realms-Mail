@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assertAccountDeleteAllowed, assertAccountManageAllowed } from '../src/service/account-service';
+import { assertAccountDeleteAllowed, assertAccountManageAllowed, collectAccountTags } from '../src/service/account-service';
 
 describe('account delete permissions', () => {
 	it('allows super admin to delete another user mailbox', () => {
@@ -40,5 +40,13 @@ describe('account delete permissions', () => {
 			{ userId: 1, email: 'user@example.com' },
 			{ userId: 2, email: 'box@example.com' }
 		)).toThrow('该邮箱不属于当前用户');
+	});
+
+	it('collects reusable mailbox tags', () => {
+		expect(collectAccountTags([
+			{ tags: '["注册","测试项目"]' },
+			{ tags: '["注册","客户"]' },
+			{ tags: '' },
+		])).toEqual(['注册', '测试项目', '客户']);
 	});
 });

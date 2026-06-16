@@ -205,6 +205,17 @@
           <div class="tag-hint" v-if="createTags.length > 0">
             <span class="account-tag" v-for="tag in createTags" :key="tag">{{ tag }}</span>
           </div>
+          <div class="tag-picker" v-if="createReusableTags.length > 0">
+            <button
+              v-for="tag in createReusableTags"
+              :key="tag"
+              type="button"
+              class="tag-picker__item"
+              @click="appendCreateTag(tag)"
+            >
+              {{ tag }}
+            </button>
+          </div>
         </div>
 
         <!-- Turnstile 验证 -->
@@ -252,6 +263,17 @@
         <div class="tag-hint" v-if="editTags.length > 0">
           <span class="account-tag" v-for="tag in editTags" :key="tag">{{ tag }}</span>
         </div>
+        <div class="tag-picker" v-if="editReusableTags.length > 0">
+          <button
+            v-for="tag in editReusableTags"
+            :key="tag"
+            type="button"
+            class="tag-picker__item"
+            @click="appendEditTag(tag)"
+          >
+            {{ tag }}
+          </button>
+        </div>
         <el-button class="simple-btn" type="primary" @click="saveTags" :loading="tagsLoading">保存</el-button>
       </div>
     </el-dialog>
@@ -276,7 +298,7 @@
 import { Icon } from "@iconify/vue";
 import { nextTick, reactive, ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import {
-  accountList, accountAdd, accountDelete, accountSetName,
+  accountList, accountTagsList, accountAdd, accountDelete, accountSetName,
   accountSetAllReceive, accountSetAsTop, accountSetTags
 } from "@/request/account.js";
 import { domainAvailableList, accountRandom } from "@/request/domain.js";
@@ -301,6 +323,7 @@ const isAdmin = computed(() => userStore.user?.type === 0);
 
 // --- 列表状态 ---
 const accounts = reactive([]);
+const reusableTags = ref([]);
 const noLoading = ref(false);
 const loading = ref(false);
 const followLoading = ref(false);
@@ -365,10 +388,13 @@ const emailPreview = computed(() => {
 
 const createTags = computed(() => parseTagInput(addForm.tags));
 const editTags = computed(() => parseTagInput(tagInput.value));
+const createReusableTags = computed(() => reusableTags.value.filter(tag => !createTags.value.includes(tag)));
+const editReusableTags = computed(() => reusableTags.value.filter(tag => !editTags.value.includes(tag)));
 
 // 初始化
 if (hasPerm('account:query')) {
   getAccountList();
+  loadReusableTags();
 }
 
 watch(() => accountStore.changeUserAccountName, () => {
@@ -488,6 +514,7 @@ function add() {
   subdomainLevels.value = [2];
   domainDropdownOpen.value = false;
   loadPublicDomains();
+  loadReusableTags();
   setTimeout(() => addRef.value?.focus?.(), 100);
 }
 
@@ -563,7 +590,8 @@ async function submit() {
   }
 
   addLoading.value = true;
-  accountAdd(email, verifyToken, createTags.value).then(account => {
+  const submittedTags = createTags.value;
+  accountAdd(email, verifyToken, submittedTags).then(account => {
     addLoading.value = false;
     showAdd.value = false;
     addForm.prefix = '';
@@ -571,6 +599,7 @@ async function submit() {
     refresh();
     verifyToken = '';
     settingStore.settings.addVerifyOpen = account.addVerifyOpen;
+    mergeReusableTags(submittedTags);
     ElMessage({ message: t('addSuccessMsg'), type: 'success', plain: true });
     verifyShow.value = false;
     userStore.refreshUserInfo();
@@ -624,6 +653,7 @@ function refresh() {
   scrollbarRef.value.setScrollTop?.(0);
   accounts.splice(0, accounts.length);
   getAccountList();
+  loadReusableTags();
 }
 
 function parseTagInput(value) {
@@ -646,6 +676,28 @@ function parseTagInput(value) {
 
 function accountTags(item) {
   return parseTagInput(item.tags);
+}
+
+function joinTags(tags) {
+  return parseTagInput(tags).join('，');
+}
+
+function mergeReusableTags(tags) {
+  reusableTags.value = joinTags([...reusableTags.value, ...parseTagInput(tags)]).split('，').filter(Boolean);
+}
+
+async function loadReusableTags() {
+  try {
+    reusableTags.value = parseTagInput(await accountTagsList());
+  } catch {}
+}
+
+function appendCreateTag(tag) {
+  addForm.tags = joinTags([...createTags.value, tag]);
+}
+
+function appendEditTag(tag) {
+  tagInput.value = joinTags([...editTags.value, tag]);
 }
 
 function formatAccountCreateTime(time) {
@@ -731,6 +783,7 @@ async function saveTags() {
   try {
     await accountSetTags(taggingAccount.value.accountId, tags);
     taggingAccount.value.tags = tags;
+    mergeReusableTags(tags);
     if (accountStore.currentAccountId === taggingAccount.value.accountId && accountStore.currentAccount) {
       accountStore.currentAccount.tags = tags;
     }
@@ -1229,6 +1282,39 @@ path[fill="#ffdda1"] { fill: #ffdd7d; }
 
 .tag-hint {
   min-height: 18px;
+}
+
+.tag-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-picker__item {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--el-border-color);
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+
+  &:hover,
+  &:focus {
+    border-color: var(--el-color-primary);
+    color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
+    outline: none;
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
 }
 
 /* ===== 子域名输入 ===== */

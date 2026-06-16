@@ -10,6 +10,12 @@ app.get('/account/list', async (c) => {
 	return c.json(result.ok(list));
 });
 
+app.get('/account/tags', async (c) => {
+	const user = userContext.getUser(c);
+	const tags = await accountService.listTags(c, userContext.getUserId(c), user.email === c.env.admin);
+	return c.json(result.ok(tags));
+});
+
 app.delete('/account/delete', async (c) => {
 	await accountService.delete(c, c.req.query(), userContext.getUser(c));
 	return c.json(result.ok());
