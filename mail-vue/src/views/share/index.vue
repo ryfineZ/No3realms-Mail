@@ -93,7 +93,12 @@
             <div class="message-actions">
               <button @click="toggleRead(message.emailId)">{{ isRead(message.emailId) ? '标为未读' : '标为已读' }}</button>
             </div>
-            <iframe v-if="message.html" class="message-html" sandbox :srcdoc="message.html"></iframe>
+            <iframe
+              v-if="message.html"
+              class="message-html"
+              sandbox="allow-popups allow-popups-to-escape-sandbox"
+              :srcdoc="message.html"
+            ></iframe>
             <p v-else>{{ message.text || '（无正文内容）' }}</p>
           </div>
         </article>

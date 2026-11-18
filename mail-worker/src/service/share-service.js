@@ -43,6 +43,11 @@ function sanitizeHtml(html) {
 			}
 		}
 	});
+	// 同时覆盖图片点击区域和使用 xlink:href 的 SVG 链接。
+	document.querySelectorAll('a, area').forEach(link => {
+		link.setAttribute('target', '_blank');
+		link.setAttribute('rel', 'noopener noreferrer');
+	});
 	return rewriteSharedHtml(document.toString());
 }
 
