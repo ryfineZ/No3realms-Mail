@@ -234,17 +234,15 @@ const emailService = {
 
 		const domain = emailUtils.getDomain(accountRow.email);
 		let resendToken = resendTokens[domain];
-		let resendVerifiedDomain = resendToken ? domain : null;
-		// 子域名时向上查找根域名的 token
+		// 子域名可以复用父域名的调用凭证，发件地址始终使用原邮箱。
 		if (!resendToken) {
 			const parts = domain.split('.');
 			for (let i = 1; i < parts.length - 1; i++) {
 				const parent = parts.slice(i).join('.');
 				if (resendTokens[parent]) {
-						resendToken = resendTokens[parent];
-						resendVerifiedDomain = parent;
-						break;
-					}
+					resendToken = resendTokens[parent];
+					break;
+				}
 			}
 		}
 
@@ -281,19 +279,13 @@ const emailService = {
 			const resend = new Resend(resendToken);
 
 			const sendForm = {
-				from: resendVerifiedDomain && resendVerifiedDomain !== domain
-						? `${name} <${emailUtils.getName(accountRow.email)}@${resendVerifiedDomain}>`
-						: `${name} <${accountRow.email}>`,
+				from: `${name} <${accountRow.email}>`,
 				to: [...receiveEmail],
 				subject: subject,
 				text: text,
 				html: html,
 				attachments: [...imageDataList, ...attachments]
 			};
-
-			if (resendVerifiedDomain && resendVerifiedDomain !== domain) {
-				sendForm.replyTo = accountRow.email;
-			}
 
 			if (sendType === 'reply') {
 				sendForm.headers = {
